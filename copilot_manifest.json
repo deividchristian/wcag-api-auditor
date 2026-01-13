@@ -1,0 +1,173 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+      "title": "WCAG Auditor API",
+      "description": "API para auditar y corregir accesibilidad HTML",
+      "version": "0.1.0"
+    },
+    "servers": [
+      {
+        "url": "https://nonexclusive-trey-thoroughgoingly.ngrok-free.dev",
+        "description": "Servidor de Producción (Túnel Ngrok)"
+      }
+    ],
+    "paths": {
+      "/audit": {
+        "post": {
+          "summary": "Audit Html",
+          "description": "Endpoint principal que audita el HTML recibido y aplica correcciones automáticas.\n\nRecibe:\n- html_content: Contenido HTML a auditar\n\nRetorna:\n- violations: Lista de violaciones WCAG detectadas\n- fixed_html: HTML corregido automáticamente\n- summary: Resumen estadístico (violations, incomplete, passes)\n- log_correcciones: Lista de correcciones aplicadas con detalles",
+          "operationId": "audit_html_audit_post",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HtmlRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/AuditResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/": {
+        "get": {
+          "summary": "Root",
+          "description": "Endpoint raíz con información de la API.",
+          "operationId": "root__get",
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "schemas": {
+        "AuditResponse": {
+          "properties": {
+            "violations": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array",
+              "title": "Violations"
+            },
+            "fixed_html": {
+              "type": "string",
+              "title": "Fixed Html"
+            },
+            "summary": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object",
+              "title": "Summary"
+            },
+            "log_correcciones": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "title": "Log Correcciones"
+            }
+          },
+          "type": "object",
+          "required": [
+            "violations",
+            "fixed_html",
+            "summary",
+            "log_correcciones"
+          ],
+          "title": "AuditResponse"
+        },
+        "HTTPValidationError": {
+          "properties": {
+            "detail": {
+              "items": {
+                "$ref": "#/components/schemas/ValidationError"
+              },
+              "type": "array",
+              "title": "Detail"
+            }
+          },
+          "type": "object",
+          "title": "HTTPValidationError"
+        },
+        "HtmlRequest": {
+          "properties": {
+            "html_content": {
+              "type": "string",
+              "title": "Html Content"
+            }
+          },
+          "type": "object",
+          "required": [
+            "html_content"
+          ],
+          "title": "HtmlRequest"
+        },
+        "ValidationError": {
+          "properties": {
+            "loc": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
+              },
+              "type": "array",
+              "title": "Location"
+            },
+            "msg": {
+              "type": "string",
+              "title": "Message"
+            },
+            "type": {
+              "type": "string",
+              "title": "Error Type"
+            }
+          },
+          "type": "object",
+          "required": [
+            "loc",
+            "msg",
+            "type"
+          ],
+          "title": "ValidationError"
+        }
+      }
+    }
+  }

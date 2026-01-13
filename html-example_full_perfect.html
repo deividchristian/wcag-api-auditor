@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="es-ES">
+<head>
+  <meta charset="utf-8">
+  <title>Fase 1: Ejemplo de página accesible</title>
+  <meta name="description" content="Ejemplo de página HTML5 semánticamente correcta y accesible WCAG 2.1 AA">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Buen contraste y foco visible para WCAG 2.2 AA -->
+  <style>
+    :root {
+      color-scheme: light dark;
+      --color-fondo: #ffffff;
+      --color-texto: #222222;
+      --color-principal: #004080;
+      --color-foco: #ff9900;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+      background-color: var(--color-fondo);
+      color: var(--color-texto);
+    }
+
+    a {
+      color: var(--color-principal);
+    }
+
+    a:focus-visible,
+    button:focus-visible {
+      outline: 3px solid var(--color-foco);
+      outline-offset: 2px;
+    }
+
+    .skip-link {
+      position: absolute;
+      top: 0.5rem;
+      left: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: #000;
+      color: #fff;
+      z-index: 100;
+      transform: translateY(-200%);
+    }
+
+    .skip-link:focus {
+      transform: translateY(0);
+    }
+
+    header {
+      background-color: #f4f4f4;
+      padding: 1rem;
+    }
+
+    nav {
+      margin-top: 1rem;
+    }
+
+    .menu {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      gap: 1rem;
+    }
+
+    .menu > li {
+      position: relative;
+    }
+
+    .menu button,
+    .menu a {
+      background: none;
+      border: none;
+      padding: 0.5rem 0.75rem;
+      font: inherit;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .menu button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .submenu {
+      list-style: none;
+      padding: 0.5rem 0;
+      margin: 0;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      min-width: 12rem;
+      background-color: #ffffff;
+      border: 1px solid #ccc;
+    }
+
+    .submenu[hidden] {
+      display: none;
+    }
+
+    .submenu li a {
+      display: block;
+      padding: 0.5rem 0.75rem;
+      white-space: nowrap;
+    }
+
+    main {
+      padding: 1rem;
+    }
+
+    section {
+      margin-bottom: 2rem;
+    }
+
+    footer {
+      border-top: 1px solid #ddd;
+      padding: 1rem;
+      font-size: 0.875rem;
+    }
+  </style>
+
+  <script>
+    // Menú desplegable accesible con teclado
+    document.addEventListener('DOMContentLoaded', function () {
+      const buttons = document.querySelectorAll('[data-menu-button]');
+
+      buttons.forEach(button => {
+        const menuId = button.getAttribute('aria-controls');
+        const menu = document.getElementById(menuId);
+
+        function closeMenu() {
+          button.setAttribute('aria-expanded', 'false');
+          menu.hidden = true;
+        }
+
+        function openMenu() {
+          button.setAttribute('aria-expanded', 'true');
+          menu.hidden = false;
+        }
+
+        function toggleMenu() {
+          const expanded = button.getAttribute('aria-expanded') === 'true';
+          expanded ? closeMenu() : openMenu();
+        }
+
+        button.addEventListener('click', toggleMenu);
+
+        button.addEventListener('keydown', event => {
+          if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            openMenu();
+            const firstLink = menu.querySelector('a');
+            if (firstLink) {
+              firstLink.focus();
+            }
+          }
+        });
+
+        menu.addEventListener('keydown', event => {
+          const items = Array.from(menu.querySelectorAll('a'));
+          const currentIndex = items.indexOf(document.activeElement);
+
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            closeMenu();
+            button.focus();
+          }
+
+          if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            const next = items[currentIndex + 1] || items[0];
+            next.focus();
+          }
+
+          if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            const prev = items[currentIndex - 1] || items[items.length - 1];
+            prev.focus();
+          }
+        });
+
+        document.addEventListener('click', event => {
+          if (!button.contains(event.target) && !menu.contains(event.target)) {
+            closeMenu();
+          }
+        });
+      });
+    });
+  </script>
+</head>
+
+<body>
+  <header>
+    <div>
+      <h1>Fase 1: Ejemplo de página accesible</h1>
+      <p>Demostración de estructura HTML5 semántica y menú de navegación accesible.</p>
+    </div>
+
+    <nav aria-label="Navegación principal">
+      <ul class="menu">
+        <li>
+          <a href="#inicio" title="Inicio">Inicio</a>
+        </li>
+
+        <li>
+      
+          <button
+            type="button"
+            data-menu-button
+            aria-haspopup="true"
+            aria-expanded="false"
+            aria-controls="menu-servicios"
+          >
+            Servicios
+            <span aria-hidden="true">▾</span>
+          </button>
+          <ul id="menu-servicios" class="submenu" hidden>
+            <li><a href="#diseno-web">Diseño web accesible</a></li>
+            <li><a href="#consultoria">Consultoría de usabilidad</a></li>
+          </ul>
+        </li>
+
+        <li>
+          
+          <button
+            type="button"
+            data-menu-button
+            aria-haspopup="true"
+            aria-expanded="false"
+            aria-controls="menu-recursos"
+          >
+            Recursos
+            <span aria-hidden="true">▾</span>
+          </button>
+          <ul id="menu-recursos" class="submenu" hidden>
+            <li><a href="#guia-html">Guía de HTML semántico</a></li>
+            <li><a href="#accesibilidad">Accesibilidad WCAG 2.2</a></li>
+          </ul>
+        </li>
+
+        <li>
+          <a href="#contacto">Contacto</a>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="contenido-principal">
+    <section id="inicio" aria-labelledby="titulo-inicio">
+      <h2 id="titulo-inicio">Inicio</h2>
+      <p>Esta página sirve como ejemplo mínimo de cómo estructurar un documento HTML5 siguiendo buenas prácticas semánticas y de accesibilidad.</p>
+      <p>Incluye encabezados jerárquicos, navegación por menús desplegables accesibles y contenido textual correctamente marcado.</p>
+    </section>
+
+    <section id="guia-html" aria-labelledby="titulo-guia-html">
+      <h2 id="titulo-guia-html">Guía de HTML semántico</h2>
+
+      <article aria-labelledby="titulo-estructura">
+        <h3 id="titulo-estructura">Estructura básica del documento</h3>
+        <p>El uso de elementos como <code>header</code>, <code>nav</code>, <code>main</code>, <code>section</code>, <code>article</code> y <code>footer</code> ayuda a que el contenido sea comprensible para personas y tecnologías de asistencia.</p>
+        <p>Una estructura lógica de encabezados facilita la navegación por teclado y el uso de atajos en lectores de pantalla.</p>
+      </article>
+
+      <article id="accesibilidad" aria-labelledby="titulo-accesibilidad">
+        <h3 id="titulo-accesibilidad">Accesibilidad y WCAG 2.2</h3>
+        <p>Los menús desplegables deben ser manejables con teclado, anunciar correctamente su estado mediante atributos ARIA y ofrecer indicadores de foco visibles.</p>
+        <p>Además, el diseño debe garantizar suficiente contraste de color y una experiencia coherente para diferentes dispositivos y tamaños de pantalla.</p>
+      </article>
+    </section>
+
+    <section id="diseno-web" aria-labelledby="titulo-diseno-web">
+      <h2 id="titulo-diseno-web">Diseño web accesible</h2>
+      <p>Planificar la accesibilidad desde el inicio del proyecto reduce costes y mejora la experiencia de todas las personas que visitan el sitio.</p>
+      <p>Una buena práctica es combinar HTML semántico, estilos CSS simples y componentes interactivos con comportamiento predecible.</p>
+    </section>
+
+    <section id="consultoria" aria-labelledby="titulo-consultoria">
+      <h2 id="titulo-consultoria">Consultoría de usabilidad</h2>
+      <p>Las auditorías de accesibilidad permiten detectar barreras y priorizar mejoras según el impacto en las personas usuarias.</p>
+      <p>Las recomendaciones suelen abarcar navegación, formularios, mensajes de error, uso de ARIA y adaptación a distintos dispositivos.</p>
+    </section>
+  </main>
+
+  <footer>
+    <p id="contacto">Contacto: <a href="mailto:info@ejemploaccesible.es">info@ejemploaccesible.es</a></p>
+    <p>&copy; 2025 Sitio de ejemplo accesible.</p>
+  </footer>
+</body>
+</html>
