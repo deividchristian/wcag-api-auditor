@@ -7,8 +7,8 @@
     },
     "servers": [
       {
-        "url": "https://nonexclusive-trey-thoroughgoingly.ngrok-free.dev",
-        "description": "Servidor de Producción (Túnel Ngrok)"
+        "url": "https://wcag-api-auditor.onrender.com",
+        "description": "Servidor de Producción (Render Cloud)"
       }
     ],
     "paths": {

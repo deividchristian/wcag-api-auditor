@@ -1,3 +1,17 @@
+# --- .gitignore ---
+
+# Dependencias gigantes (NUNCA SUBIR)
+node_modules/
 venv/
 __pycache__/
+*.pyc
 .DS_Store
+
+# Archivos de la librería Axe (se descarga sola o se copia en build)
+axe.min.js
+
+# Archivos temporales generados por tu script (para no ensuciar)
+reporte_*.json
+html_*_*.html
+temp_audits/
+*.log

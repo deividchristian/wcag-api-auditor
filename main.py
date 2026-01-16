@@ -1,357 +1,153 @@
 import os
-import re
-from typing import List, Dict, Any, Tuple
-from fastapi import FastAPI, HTTPException
+import shutil
+import threading
+import uuid
+from http.server import SimpleHTTPRequestHandler, HTTPServer
+from contextlib import asynccontextmanager
+from typing import Optional
+
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from pydantic import BaseModel
-from playwright.sync_api import sync_playwright
 
-app = FastAPI(title="WCAG Auditor API", description="API para auditar y corregir accesibilidad HTML")
+# Importamos tus módulos probados
+from modules import axe_engine, auto_fixer, auditors
 
-class HtmlRequest(BaseModel):
-    html_content: str
+# --- CONFIGURACIÓN DEL SERVIDOR EFÍMERO ---
+# Necesitamos esto en la API también, porque Lighthouse en Docker
+# odia los archivos locales (file://).
 
-class AuditResponse(BaseModel):
-    violations: List[Dict[str, Any]]
-    fixed_html: str
-    summary: Dict[str, int]
-    log_correcciones: List[str]
+SERVER_PORT = 8099
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMP_DIR = os.path.join(BASE_DIR, "temp_audits")
 
-def load_axe_source() -> str:
-    """Carga el archivo axe.min.js desde el sistema de archivos."""
-    path = "axe.min.js"
-    if not os.path.exists(path):
-        raise FileNotFoundError("No se encontró axe.min.js en el servidor.")
-    with open(path, "r", encoding="utf-8") as f:
-        return f.read()
+# Asegurar que existe el directorio temporal
+os.makedirs(TEMP_DIR, exist_ok=True)
 
-def line_from_index(text: str, idx: int) -> int:
-    """Devuelve el número de línea (1-indexed) para un índice dado."""
-    return text.count("\n", 0, max(idx, 0)) + 1
+class QuietHandler(SimpleHTTPRequestHandler):
+    def log_message(self, format, *args):
+        pass
 
-def find_line_number(source: str, snippet: str) -> int | None:
-    """Devuelve línea (1-indexed) donde aparece snippet en source."""
-    if not source or not snippet:
-        return None
-    pos = source.find(snippet)
-    if pos == -1:
-        return None
-    return line_from_index(source, pos)
-
-def run_axe_on_content(page, html_content: str, axe_source: str) -> Dict[str, Any]:
-    """Ejecuta axe-core sobre el contenido HTML inyectado."""
-    page.set_content(html_content)
-    page.add_script_tag(content=axe_source)
-    page.wait_for_function("() => typeof axe !== 'undefined'")
-    return page.evaluate(
-        """async () => {
-            return await axe.run(document, {
-                runOnly: { type: "tag", values: ["wcag2a","wcag2aa","wcag21a","wcag21aa"] }
-            });
-        }"""
-    )
-
-def summarize(results: Dict[str, Any]) -> Dict[str, int]:
-    """Crea un resumen de los resultados de axe."""
-    return {
-        "violations": len(results.get("violations", [])),
-        "incomplete": len(results.get("incomplete", [])),
-        "passes": len(results.get("passes", [])),
-    }
-
-def suggest_fix(rule_id: str, node: Dict[str, Any]) -> str:
-    """Sugiere una corrección basada en la regla violada."""
-    html = node.get("html", "")
-    target = node.get("target", [])
-    failure = (node.get("failureSummary") or "").strip()
-
-    hints = {
-        "image-alt": "Añade alt a <img>. Decorativa: alt=\"\". Informativa: alt descriptivo.",
-        "document-title": "Asegura <title> único y correctamente cerrado en <head>.",
-        "html-has-lang": "Asegura <html lang=\"es-ES\"> (un solo lang, correcto).",
-        "duplicate-id": "Haz IDs únicos (no repitas id=\"...\").",
-        "label": "Inputs necesitan <label for=\"id\"> o aria-label/aria-labelledby.",
-        "link-name": "Enlaces necesitan texto descriptivo y/o aria-label.",
-        "button-name": "Botones necesitan nombre accesible (texto visible o aria-label).",
-        "aria-valid-attr": "Elimina atributos ARIA inválidos (typos, atributos no permitidos).",
-        "aria-valid-attr-value": "Corrige valores ARIA: true/false, menu, etc.",
-        "region": "Usa landmarks correctos: <main>, <nav aria-label>, etc.",
-        "landmark-one-main": "Debe existir un único <main> o role=\"main\".",
-        "color-contrast": "Ajusta contraste de texto/fondo para cumplir AA.",
-        "focus-visible": "No elimines outline; define foco visible en :focus-visible."
-    }
-
-    base = hints.get(rule_id, "Revisa la regla en helpUrl y corrige el HTML/CSS/ARIA.")
-    where = f"Target: {target}" if target else "Target: (no disponible)"
-    extra = f"\nDetalle: {failure}" if failure else ""
-    snippet = f"\nHTML: {html}" if html else ""
-    return f"{base}\n{where}{extra}{snippet}".strip()
-
-def build_issue_list(results: Dict[str, Any], source_html: str | None = None) -> List[Dict[str, Any]]:
-    """Construye una lista estructurada de violaciones detectadas."""
-    out = []
-    for v in results.get("violations", []):
-        for node in v.get("nodes", []):
-            snippet = node.get("html") or ""
-            line = find_line_number(source_html, snippet) if source_html else None
-
-            out.append({
-                "rule_id": v.get("id"),
-                "impact": v.get("impact"),
-                "help": v.get("help"),
-                "helpUrl": v.get("helpUrl"),
-                "wcag_tags": [t for t in v.get("tags", []) if "wcag" in t.lower()],
-                "target": node.get("target"),
-                "failureSummary": node.get("failureSummary"),
-                "html": snippet,
-                "line": line,
-                "suggested_fix": suggest_fix(v.get("id"), node),
-            })
-    return out
-
-def best_effort_fix_html(bad_html: str) -> Tuple[str, List[Dict[str, Any]]]:
-    """
-    Aplica correcciones seguras y documenta cambios con línea (best-effort).
-    Retorna: (fixed_html, cambios_detallados)
-    """
-    changes: List[Dict[str, Any]] = []
-    fixed = bad_html
-
-    def log_change(rule: str, before: str, after: str, line: int | None):
-        changes.append({
-            "line": line,
-            "rule": rule,
-            "before": before,
-            "after": after
-        })
-
-    def replace_first(pattern: str, repl: str, rule: str, flags=re.I | re.S) -> bool:
-        nonlocal fixed
-        m = re.search(pattern, fixed, flags)
-        if not m:
-            return False
-        before = m.group(0)
-        line = line_from_index(fixed, m.start())
-        new_fixed = re.sub(pattern, repl, fixed, count=1, flags=flags)
-        if new_fixed != fixed:
-            log_change(rule, before, repl, line)
-            fixed = new_fixed
-            return True
-        return False
-
-    def replace_all(pattern: str, repl: str, rule: str, flags=re.I | re.S) -> int:
-        """Reemplaza todas las coincidencias y registra cada una."""
-        nonlocal fixed
-        count = 0
-        while True:
-            m = re.search(pattern, fixed, flags)
-            if not m:
-                break
-            before = m.group(0)
-            line = line_from_index(fixed, m.start())
-            new_fixed = re.sub(pattern, repl, fixed, count=1, flags=flags)
-            if new_fixed == fixed:
-                break
-            log_change(rule, before, repl, line)
-            fixed = new_fixed
-            count += 1
-        return count
-
-    # 1) Fix duplicate lang: deja solo uno (es-ES)
-    m_html = re.search(r'<html\b[^>]*>', fixed, flags=re.I)
-    if m_html:
-        before = m_html.group(0)
-        after = re.sub(r'\s+lang="[^"]+"', '', before, flags=re.I)
-        after = re.sub(r'<html\b', '<html lang="es-ES"', after, count=1, flags=re.I)
-        if after != before:
-            log_change('Fix: <html> con un solo lang="es-ES".', before, after, line_from_index(fixed, m_html.start()))
-            fixed = fixed[:m_html.start()] + after + fixed[m_html.end():]
-
-    # 2) Ensure meta charset utf-8 only once; elimina utf8 incorrecto y dupes
-    replace_all(r'<meta\s+charset="utf8"\s*/?>\s*', '', 'Fix: eliminado <meta charset="utf8"> (incorrecto).', flags=re.I)
-
-    # asegurar inserción de <meta charset="utf-8"> tras <head...> si no existe
-    if not re.search(r'<meta\s+charset="utf-8"\s*/?>', fixed, flags=re.I):
-        replace_first(
-            r'(<head\b[^>]*>)',
-            r'\1\n  <meta charset="utf-8">',
-            'Fix: añadido <meta charset="utf-8"> en <head>.',
-            flags=re.I
-        )
-
-    # normalizar formato meta charset
-    replace_all(r'<meta\s+charset="utf-8"\s*/?>', '<meta charset="utf-8">', 'Fix: normalizado <meta charset="utf-8">.', flags=re.I)
-
-    # eliminar duplicados extra dejando solo el primero
-    metas = list(re.finditer(r'<meta charset="utf-8">', fixed, flags=re.I))
-    if len(metas) > 1:
-        # borrar del final hacia atrás para no romper índices
-        for mm in reversed(metas[1:]):
-            before = mm.group(0)
-            line = line_from_index(fixed, mm.start())
-            fixed = fixed[:mm.start()] + "" + fixed[mm.end():]
-            log_change("Fix: eliminado <meta charset> duplicado.", before, "", line)
-
-    # 3) Fix title tag (cierre y/o inserción)
-    replace_first(
-        r'<title>(.*?)<title>',
-        r'<title>\1</title>',
-        "Fix: <title> corregido (cierre faltante).",
-        flags=re.I | re.S
-    )
-    if not re.search(r'<title>.*?</title>', fixed, flags=re.I | re.S):
-        replace_first(
-            r'(<head\b[^>]*>\s*(?:<meta[^>]*>\s*)*)',
-            r'\1<title>Fase 1: Ejemplo de página accesible</title>\n',
-            "Fix: añadido <title> por defecto.",
-            flags=re.I | re.S
-        )
-
-    # 4) Fix viewport comma
-    replace_all(
-        r'content="width=device-width\s+initial-scale=1"',
-        'content="width=device-width, initial-scale=1"',
-        "Fix: meta viewport correcto (coma).",
-        flags=re.I
-    )
-
-    # 5) Restore focus visible (outline:none -> outline visible)
-    replace_all(
-        r'outline:\s*none\s*;',
-        'outline: 3px solid #ff9900;\n      outline-offset: 2px;',
-        "Fix: foco visible (no outline:none).",
-        flags=re.I
-    )
-
-    # 6) Fix skip link href
-    replace_all(
-        r'href="#contenido-principal[^"]*"',
-        'href="#contenido-principal"',
-        "Fix: skip-link apunta a #contenido-principal.",
-        flags=re.I
-    )
-
-    # 7) Convert role="main" div to <main id="contenido-principal">
-    replace_first(
-        r'<div\s+role="main"\s+id="contenido"\s*>',
-        '<main id="contenido-principal">',
-        'Fix: landmark principal: <main id="contenido-principal">.',
-        flags=re.I
-    )
-    # cierre: reemplazo "best effort"
-    replace_first(
-        r'</div>\s*<!-- footer',
-        '</main>\n\n  <!-- footer',
-        'Fix: cierre de <main> (antes era </div>).',
-        flags=re.I
-    )
-
-    # 8) Fix mailto
-    replace_all(
-        r'href="mail:([^"]+)"',
-        r'href="mailto:\1"',
-        'Fix: enlace email mailto: (mail: -> mailto:).',
-        flags=re.I
-    )
-
-    # 9) Add missing alt to banner.png (si no tiene alt)
-    pattern_banner = r'<img\b(?![^>]*\salt=)[^>]*\bsrc="banner\.png"[^>]*>'
-    def _repl_banner(m):
-        tag = m.group(0)
-        if tag.endswith("/>"):
-            return tag[:-2] + ' alt="Banner del sitio"/>'
-        return tag[:-1] + ' alt="Banner del sitio">'
-    # replace_all manual para log por match
-    while True:
-        m = re.search(pattern_banner, fixed, flags=re.I)
-        if not m:
-            break
-        before = m.group(0)
-        after = _repl_banner(m)
-        if after != before:
-            log_change('Fix: <img src="banner.png"> con alt.', before, after, line_from_index(fixed, m.start()))
-            fixed = fixed[:m.start()] + after + fixed[m.end():]
-        else:
-            break
-
-    # 10) Fix duplicate id="diseno-web" (renombra segunda ocurrencia)
-    matches = list(re.finditer(r'id="diseno-web"', fixed))
-    if len(matches) > 1:
-        second = matches[1]
-        before = second.group(0)
-        line = line_from_index(fixed, second.start())
-        fixed = fixed[:second.start()] + 'id="diseno-web-2"' + fixed[second.end():]
-        log_change('Fix: IDs únicos (segundo diseno-web -> diseno-web-2).', before, 'id="diseno-web-2"', line)
-
-    # 11) Fix ARIA values typos
-    replace_all(r'aria-expanded="falso"', 'aria-expanded="false"', 'Fix: aria-expanded (falso -> false).', flags=re.I)
-    replace_all(r'aria-haspopup="menuu"', 'aria-haspopup="menu"', 'Fix: aria-haspopup (menuu -> menu).', flags=re.I)
-    replace_all(r'aria-hidden="falso"', 'aria-hidden="true"', 'Fix: aria-hidden (falso -> true).', flags=re.I)
-    replace_all(r'aria-pressed="talvez"', 'aria-pressed="false"', 'Fix: aria-pressed (talvez -> false).', flags=re.I)
-
-    return fixed, changes
-
-@app.post("/audit", response_model=AuditResponse)
-def audit_html(request: HtmlRequest):
-    """
-    Endpoint principal que audita el HTML recibido y aplica correcciones automáticas.
-    
-    Recibe:
-    - html_content: Contenido HTML a auditar
-    
-    Retorna:
-    - violations: Lista de violaciones WCAG detectadas
-    - fixed_html: HTML corregido automáticamente
-    - summary: Resumen estadístico (violations, incomplete, passes)
-    - log_correcciones: Lista de correcciones aplicadas con detalles
-    """
+def start_background_server():
+    """Inicia un servidor estático para servir los archivos temporales a Lighthouse."""
     try:
-        # Cargar axe.min.js
-        axe_source = load_axe_source()
+        server = HTTPServer(('0.0.0.0', SERVER_PORT), QuietHandler)
+        server.root_directory = TEMP_DIR
+        # Hack para forzar el directorio raíz del servidor
+        os.chdir(TEMP_DIR)
         
-        # Ejecutar auditoría con Playwright
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
-            
-            # Ejecutar axe sobre el contenido HTML
-            results = run_axe_on_content(page, request.html_content, axe_source)
-            
-            browser.close()
-        
-        # Construir lista de violaciones
-        violations = build_issue_list(results, request.html_content)
-        
-        # Aplicar correcciones automáticas
-        fixed_html, changes = best_effort_fix_html(request.html_content)
-        
-        # Crear resumen
-        summary = summarize(results)
-        
-        # Formatear log de correcciones
-        log_correcciones = [
-            f'linea {c["line"]}: {c["rule"]} | BEFORE: {c["before"]} | AFTER: {c["after"]}'
-            for c in changes
-        ]
-        
-        return AuditResponse(
-            violations=violations,
-            fixed_html=fixed_html,
-            summary=summary,
-            log_correcciones=log_correcciones
-        )
-    
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error durante la auditoría: {str(e)}")
+        thread = threading.Thread(target=server.serve_forever)
+        thread.daemon = True
+        thread.start()
+        print(f"🌍 Servidor Interno de Auditoría activo en puerto {SERVER_PORT}")
+    except OSError:
+        print("⚠️ El servidor interno ya estaba corriendo (esto es normal en reloads).")
+
+# --- LIFESPAN (Arranque de FastAPI) ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Antes de iniciar la API, levantamos el servidor estático
+    # Volvemos al directorio base para no afectar imports
+    current = os.getcwd()
+    start_background_server()
+    os.chdir(current) 
+    yield
+    # (Al apagar no hacemos nada especial, el hilo muere solo)
+
+app = FastAPI(title="WCAG Auditor API (Hybrid)", lifespan=lifespan)
+
+# --- MODELOS ---
+class AuditRequest(BaseModel):
+    html_content: str
+    run_fixer: bool = True
+
+# --- ENDPOINTS ---
 
 @app.get("/")
-def root():
-    """Endpoint raíz con información de la API."""
-    return {
-        "message": "WCAG Auditor API",
-        "description": "API para auditar y corregir accesibilidad HTML usando axe-core",
-        "endpoints": {
-            "POST /audit": "Audita HTML y aplica correcciones automáticas"
+def read_root():
+    return {"status": "Online", "mode": "Hybrid (Python + Node)"}
+
+@app.post("/audit")
+async def audit_html(request: AuditRequest, background_tasks: BackgroundTasks):
+    """
+    1. Guarda el HTML.
+    2. Ejecuta auditoría completa (Axe, Lighthouse, Pa11y, W3C).
+    3. Aplica correcciones (Auto-fixer).
+    4. Re-audita (opcional, para ver mejoras).
+    """
+    try:
+        # 1. Gestión de Archivos Temporales
+        job_id = str(uuid.uuid4())
+        filename = f"{job_id}.html"
+        fixed_filename = f"{job_id}_fixed.html"
+        
+        file_path = os.path.join(TEMP_DIR, filename)
+        fixed_path = os.path.join(TEMP_DIR, fixed_filename)
+        
+        # Guardar HTML recibido
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(request.html_content)
+
+        # Preparar URLs para las herramientas (apuntando al servidor interno)
+        # Nota: En Render/Docker, localhost funciona para procesos internos
+        target_url = f"http://localhost:{SERVER_PORT}/{filename}"
+        
+        # 2. Cargar Axe
+        axe_src = axe_engine.load_axe_source("axe.min.js")
+
+        results = {
+            "job_id": job_id,
+            "status": "completed",
+            "audit_initial": {},
+            "fixes_applied": [],
+            "fixed_html_preview": None
         }
-    }
+
+        # 3. FASE 1: Auditoría Inicial
+        print(f"Running audit for {job_id}...")
+        
+        # Axe
+        axe_raw = axe_engine.run_axe_audit(target_url, axe_src)
+        results["audit_initial"]["axe"] = axe_engine.summarize_axe(axe_raw)
+        
+        # Lighthouse
+        results["audit_initial"]["lighthouse"] = auditors.run_lighthouse(target_url)
+        
+        # Pa11y
+        results["audit_initial"]["pa11y"] = auditors.run_pa11y(target_url)
+        
+        # W3C (Usa archivo físico)
+        results["audit_initial"]["w3c"] = auditors.run_w3c_validator(file_path)
+
+        # 4. FASE 2: Auto-Fixer
+        if request.run_fixer:
+            fixed_html, changes = auto_fixer.best_effort_fix_html(request.html_content)
+            
+            # Guardar arreglado para referencia (o futura re-auditoría)
+            with open(fixed_path, "w", encoding="utf-8") as f:
+                f.write(fixed_html)
+                
+            results["fixes_applied"] = changes
+            results["fixed_html_preview"] = fixed_html[:500] + "... (truncated)"
+            
+            # Agregamos el HTML completo en un campo separado si se necesita
+            results["full_fixed_html"] = fixed_html
+
+        # Limpieza en segundo plano (borrar archivos temp después de unos segundos)
+        background_tasks.add_task(cleanup_files, [file_path, fixed_path])
+
+        return results
+
+    except Exception as e:
+        print(f"Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+def cleanup_files(paths):
+    """Borra archivos temporales."""
+    import time
+    time.sleep(5) # Espera 5s para asegurar que procesos terminen
+    for p in paths:
+        try:
+            if os.path.exists(p):
+                os.remove(p)
+        except Exception:
+            pass

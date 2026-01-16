@@ -1,0 +1,193 @@
+{
+  "original_file": "html-example_full_error.html",
+  "fixed_file": "html_maestro_reparado.html",
+  "phase_1_audit_initial": {
+    "axe_core": {
+      "violations": 0,
+      "incomplete": 0,
+      "passes": 4
+    },
+    "lighthouse": {
+      "error": "Lighthouse output parsing failed",
+      "raw_snippet": "{\n  \"lighthouseVersion\": \"11.7.1\",\n  \"requestedUrl\": \"http://localhost:8085/html-example_full_error.html\",\n  \"mainDocumentUrl\": \"http://localhost:8085/html-example_full_error.html\",\n  \"finalDisplayedU"
+    },
+    "pa11y": {
+      "issues_count": 0,
+      "issues": []
+    },
+    "w3c": {
+      "valid": false,
+      "error_count": 4,
+      "messages": [
+        {
+          "type": "error",
+          "lastLine": 2,
+          "lastColumn": 24,
+          "message": "Duplicate attribute “lang”.",
+          "extract": "ng=\"es-ES\" lang=\"en\"> <!-- lan",
+          "hiliteStart": 15,
+          "hiliteLength": 1
+        },
+        {
+          "type": "error",
+          "lastLine": 4,
+          "lastColumn": 23,
+          "firstColumn": 3,
+          "message": "The only allowed value for the “charset” attribute for the “meta” element is “utf-8”.",
+          "extract": "\n<head>\n  <meta charset=\"utf8\"> <!-- ",
+          "hiliteStart": 10,
+          "hiliteLength": 21
+        },
+        {
+          "type": "error",
+          "lastLine": 263,
+          "lastColumn": 7,
+          "message": "End of file seen when expecting text or an end tag.",
+          "extract": "dy>\n</html>",
+          "hiliteStart": 10,
+          "hiliteLength": 1
+        },
+        {
+          "type": "error",
+          "lastLine": 5,
+          "lastColumn": 9,
+          "firstColumn": 3,
+          "message": "Unclosed element “title”.",
+          "extract": "f-8 -->\n  <title>Fase 1",
+          "hiliteStart": 10,
+          "hiliteLength": 7
+        }
+      ]
+    }
+  },
+  "fixes_applied": [
+    {
+      "line": 5,
+      "rule": "Fix: Cierre forzado de <title>",
+      "before": "<title>Fase 1 Ejemplo de página accesible",
+      "after": "\\1</title>"
+    },
+    {
+      "line": 2,
+      "rule": "Fix: Normalización <html lang=\"es-ES\">",
+      "before": "<html lang=\"es-ES\" lang=\"en\">",
+      "after": "<html lang=\"es-ES\">"
+    },
+    {
+      "line": 0,
+      "rule": "Fix: Corrección sintaxis utf-8",
+      "before": "(Múltiples ocurrencias)",
+      "after": "charset=\"utf-8\""
+    },
+    {
+      "line": 0,
+      "rule": "Fix: Coma faltante en Viewport",
+      "before": "(Múltiples ocurrencias)",
+      "after": "\\1, \\2"
+    },
+    {
+      "line": 229,
+      "rule": "Fix: Agregado alt genérico",
+      "before": "<img src=\"banner.png\">",
+      "after": "<img src=\"banner.png\" alt=\"Imagen descriptiva\">"
+    },
+    {
+      "line": 239,
+      "rule": "Fix: ID duplicado resuelto (diseno-web-2)",
+      "before": "id=\"diseno-web\"",
+      "after": "id=\"diseno-web-2\""
+    },
+    {
+      "line": 0,
+      "rule": "Fix: typo aria-expanded",
+      "before": "(Múltiples ocurrencias)",
+      "after": "aria-expanded=\"false\""
+    },
+    {
+      "line": 0,
+      "rule": "Fix: typo aria-hidden",
+      "before": "(Múltiples ocurrencias)",
+      "after": "aria-hidden=\"false\""
+    },
+    {
+      "line": 0,
+      "rule": "Fix: typo aria-pressed",
+      "before": "(Múltiples ocurrencias)",
+      "after": "aria-pressed=\"mixed\""
+    },
+    {
+      "line": 0,
+      "rule": "Fix: typo aria-haspopup",
+      "before": "(Múltiples ocurrencias)",
+      "after": "aria-haspopup=\"menu\""
+    },
+    {
+      "line": 0,
+      "rule": "Fix: CSS outline:none eliminado",
+      "before": "(Múltiples ocurrencias)",
+      "after": "outline: 2px solid blue;"
+    },
+    {
+      "line": 0,
+      "rule": "Fix: Protocolo mailto corregido",
+      "before": "(Múltiples ocurrencias)",
+      "after": "href=\"mailto:"
+    },
+    {
+      "line": 0,
+      "rule": "Fix: Skip link href inválido",
+      "before": "(Múltiples ocurrencias)",
+      "after": "href=\"#contenido-principal\""
+    }
+  ],
+  "phase_2_audit_fixed": {
+    "axe_core": {
+      "violations": 0,
+      "incomplete": 0,
+      "passes": 4
+    },
+    "lighthouse": {
+      "error": "Lighthouse output parsing failed",
+      "raw_snippet": "{\n  \"lighthouseVersion\": \"11.7.1\",\n  \"requestedUrl\": \"http://localhost:8085/html_maestro_reparado.html\",\n  \"mainDocumentUrl\": \"http://localhost:8085/html_maestro_reparado.html\",\n  \"finalDisplayedUrl\":"
+    },
+    "pa11y": {
+      "issues_count": 0,
+      "issues": []
+    },
+    "w3c": {
+      "valid": false,
+      "error_count": 3,
+      "messages": [
+        {
+          "type": "error",
+          "lastLine": 5,
+          "lastColumn": 58,
+          "firstColumn": 52,
+          "message": "Element “title” not allowed as child of element “head” in this context. (Suppressing further errors from this subtree.)",
+          "extract": "le</title><title> <!-- ",
+          "hiliteStart": 10,
+          "hiliteLength": 7
+        },
+        {
+          "type": "error",
+          "lastLine": 263,
+          "lastColumn": 7,
+          "message": "End of file seen when expecting text or an end tag.",
+          "extract": "dy>\n</html>",
+          "hiliteStart": 10,
+          "hiliteLength": 1
+        },
+        {
+          "type": "error",
+          "lastLine": 5,
+          "lastColumn": 58,
+          "firstColumn": 52,
+          "message": "Unclosed element “title”.",
+          "extract": "le</title><title> <!-- ",
+          "hiliteStart": 10,
+          "hiliteLength": 7
+        }
+      ]
+    }
+  }
+}

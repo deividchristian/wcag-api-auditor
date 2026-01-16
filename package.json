@@ -1,0 +1,11 @@
+{
+    "name": "wcag-auditor-hybrid",
+    "version": "1.0.0",
+    "scripts": {
+      "audit": "echo 'Use orchestrator.py'"
+    },
+    "dependencies": {
+      "lighthouse": "^11.0.0",
+      "pa11y": "^6.2.3"
+    }
+  }

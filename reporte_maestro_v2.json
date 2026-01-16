@@ -1,0 +1,374 @@
+{
+  "original_file": "html-example_full_error.html",
+  "fixed_file": "html_maestro_reparado_v2.html",
+  "phase_1_audit_initial": {
+    "axe_core": {
+      "violations": 0,
+      "incomplete": 0,
+      "passes": 4
+    },
+    "lighthouse": {
+      "error": "Lighthouse output parsing failed",
+      "raw_snippet": "{\n  \"lighthouseVersion\": \"11.7.1\",\n  \"requestedUrl\": \"http://localhost:8085/html-example_full_error.html\",\n  \"mainDocumentUrl\": \"http://localhost:8085/html-example_full_error.html\",\n  \"finalDisplayedU"
+    },
+    "pa11y": {
+      "issues_count": 0,
+      "issues": []
+    },
+    "w3c": {
+      "valid": false,
+      "error_count": 4,
+      "messages": [
+        {
+          "type": "error",
+          "lastLine": 2,
+          "lastColumn": 24,
+          "message": "Duplicate attribute “lang”.",
+          "extract": "ng=\"es-ES\" lang=\"en\"> <!-- lan",
+          "hiliteStart": 15,
+          "hiliteLength": 1
+        },
+        {
+          "type": "error",
+          "lastLine": 4,
+          "lastColumn": 23,
+          "firstColumn": 3,
+          "message": "The only allowed value for the “charset” attribute for the “meta” element is “utf-8”.",
+          "extract": "\n<head>\n  <meta charset=\"utf8\"> <!-- ",
+          "hiliteStart": 10,
+          "hiliteLength": 21
+        },
+        {
+          "type": "error",
+          "lastLine": 263,
+          "lastColumn": 7,
+          "message": "End of file seen when expecting text or an end tag.",
+          "extract": "dy>\n</html>",
+          "hiliteStart": 10,
+          "hiliteLength": 1
+        },
+        {
+          "type": "error",
+          "lastLine": 5,
+          "lastColumn": 9,
+          "firstColumn": 3,
+          "message": "Unclosed element “title”.",
+          "extract": "f-8 -->\n  <title>Fase 1",
+          "hiliteStart": 10,
+          "hiliteLength": 7
+        }
+      ]
+    }
+  },
+  "fixes_applied": [
+    {
+      "line": 5,
+      "rule": "Fix: Cierre forzado de <title>",
+      "before": "<title>Fase 1 Ejemplo de página accesible",
+      "after": "\\1</title>"
+    },
+    {
+      "line": 5,
+      "rule": "Fix: Eliminado <title> fantasma duplicado",
+      "before": "</title><title>",
+      "after": "\\1"
+    },
+    {
+      "line": 2,
+      "rule": "Fix: Normalización <html lang=\"es-ES\">",
+      "before": "<html lang=\"es-ES\" lang=\"en\">",
+      "after": "<html lang=\"es-ES\">"
+    },
+    {
+      "line": 0,
+      "rule": "Fix: Corrección sintaxis utf-8",
+      "before": "(Múltiples ocurrencias)",
+      "after": "charset=\"utf-8\""
+    },
+    {
+      "line": 0,
+      "rule": "Fix: Coma faltante en Viewport",
+      "before": "(Múltiples ocurrencias)",
+      "after": "\\1, \\2"
+    },
+    {
+      "line": 229,
+      "rule": "Fix: Agregado alt genérico",
+      "before": "<img src=\"banner.png\">",
+      "after": "<img src=\"banner.png\" alt=\"Imagen descriptiva\">"
+    },
+    {
+      "line": 239,
+      "rule": "Fix: ID duplicado resuelto",
+      "before": "id=\"diseno-web\"",
+      "after": "id=\"diseno-web-2\""
+    },
+    {
+      "line": 0,
+      "rule": "Fix: typo aria-expanded",
+      "before": "(Múltiples ocurrencias)",
+      "after": "aria-expanded=\"false\""
+    },
+    {
+      "line": 0,
+      "rule": "Fix: typo aria-hidden",
+      "before": "(Múltiples ocurrencias)",
+      "after": "aria-hidden=\"false\""
+    },
+    {
+      "line": 0,
+      "rule": "Fix: typo aria-pressed",
+      "before": "(Múltiples ocurrencias)",
+      "after": "aria-pressed=\"mixed\""
+    },
+    {
+      "line": 0,
+      "rule": "Fix: typo aria-haspopup",
+      "before": "(Múltiples ocurrencias)",
+      "after": "aria-haspopup=\"menu\""
+    },
+    {
+      "line": 0,
+      "rule": "Fix: CSS outline:none eliminado",
+      "before": "(Múltiples ocurrencias)",
+      "after": "outline: 2px solid blue;"
+    },
+    {
+      "line": 0,
+      "rule": "Fix: Protocolo mailto corregido",
+      "before": "(Múltiples ocurrencias)",
+      "after": "href=\"mailto:"
+    },
+    {
+      "line": 0,
+      "rule": "Fix: Skip link href inválido",
+      "before": "(Múltiples ocurrencias)",
+      "after": "href=\"#contenido-principal\""
+    }
+  ],
+  "phase_2_audit_fixed": {
+    "axe_core": {
+      "violations": 6,
+      "incomplete": 2,
+      "passes": 24
+    },
+    "lighthouse": {
+      "score_accessibility": 67
+    },
+    "pa11y": {
+      "issues_count": 1,
+      "issues": [
+        {
+          "code": "WCAG2AA.Principle2.Guideline2_4.2_4_1.G1,G123,G124.NoSuchID",
+          "type": "error",
+          "typeCode": 1,
+          "message": "This link points to a named anchor \"contenido-principal\" within the document, but no anchor exists with that name.",
+          "context": "<a href=\"#contenido-principal\" class=\"skip-link\">Saltar al contenido principal</a>",
+          "selector": "html > body > a",
+          "runner": "htmlcs",
+          "runnerExtras": {}
+        }
+      ]
+    },
+    "w3c": {
+      "valid": false,
+      "error_count": 14,
+      "messages": [
+        {
+          "type": "error",
+          "lastLine": 8,
+          "lastColumn": 24,
+          "firstColumn": 3,
+          "message": "A document must not include more than one “meta” element with a “charset” attribute.",
+          "extract": "oma -->\n  <meta charset=\"utf-8\"> <!-- ",
+          "hiliteStart": 10,
+          "hiliteLength": 22
+        },
+        {
+          "type": "error",
+          "lastLine": 15,
+          "firstLine": 14,
+          "lastColumn": 6,
+          "firstColumn": 30,
+          "message": "CSS: Parse Error.",
+          "extract": ": #222222; /* falta punto y coma en la línea anterior */\n      --colo",
+          "hiliteStart": 10,
+          "hiliteLength": 53
+        },
+        {
+          "type": "error",
+          "lastLine": 132,
+          "lastColumn": 29,
+          "message": "Duplicate attribute “role”.",
+          "extract": "e=\"banner\" role=\"header\"> <!--",
+          "hiliteStart": 15,
+          "hiliteLength": 1
+        },
+        {
+          "type": "info",
+          "lastLine": 132,
+          "lastColumn": 38,
+          "firstColumn": 3,
+          "subType": "warning",
+          "message": "The “banner” role is unnecessary for element “header”.",
+          "extract": "al</a>\n\n  <header role=\"banner\" role=\"header\"> <!-- ",
+          "hiliteStart": 10,
+          "hiliteLength": 36
+        },
+        {
+          "type": "error",
+          "lastLine": 140,
+          "lastColumn": 34,
+          "firstColumn": 7,
+          "message": "Discarding superfluous token “main” from value of attribute “role”. Browsers only process the first token found that is a defined ARIA non-abstract role.",
+          "extract": "iv>\n      <nav role=\"navigation main\"> <!-- ",
+          "hiliteStart": 10,
+          "hiliteLength": 28
+        },
+        {
+          "type": "error",
+          "lastLine": 143,
+          "lastColumn": 62,
+          "firstColumn": 13,
+          "message": "Attribute “aria-rolee” not allowed on element “a” at this point.",
+          "extract": "          <a href=\"inicio\" title=\"Inicio\" aria-rolee=\"link\">Inicio",
+          "hiliteStart": 10,
+          "hiliteLength": 50
+        },
+        {
+          "type": "error",
+          "lastLine": 166,
+          "lastColumn": 74,
+          "firstColumn": 17,
+          "message": "Attribute “alt” not allowed on element “a” at this point.",
+          "extract": "          <a href=\"diseno-web\" alt=\"Texto que no se usa en enlaces\">Diseño",
+          "hiliteStart": 10,
+          "hiliteLength": 58
+        },
+        {
+          "type": "error",
+          "lastLine": 194,
+          "lastColumn": 64,
+          "firstColumn": 17,
+          "message": "Element “a” is missing required attribute “aria-checked”.",
+          "extract": "          <a href=\"accesibilidad\" role=\"menuitemcheckbox\">Accesi",
+          "hiliteStart": 10,
+          "hiliteLength": 48
+        },
+        {
+          "type": "info",
+          "lastLine": 209,
+          "lastColumn": 34,
+          "firstColumn": 3,
+          "subType": "warning",
+          "message": "A document should not include more than one visible element with “role=main”.",
+          "extract": "AIN -->\n  <div role=\"main\" id=\"contenido\">\n    <",
+          "hiliteStart": 10,
+          "hiliteLength": 32
+        },
+        {
+          "type": "error",
+          "lastLine": 210,
+          "lastColumn": 58,
+          "firstColumn": 5,
+          "message": "Attribute “aria-labelled-by” not allowed on element “section” at this point.",
+          "extract": "ido\">\n    <section id=\"inicio\" aria-labelled-by=\"titulo-inicio\"> <!-- ",
+          "hiliteStart": 10,
+          "hiliteLength": 54
+        },
+        {
+          "type": "error",
+          "lastLine": 213,
+          "lastColumn": 9,
+          "firstColumn": 7,
+          "message": "End tag “p” implied, but there were open elements.",
+          "extract": "ada\n      <p>Incluy",
+          "hiliteStart": 10,
+          "hiliteLength": 3
+        },
+        {
+          "type": "error",
+          "lastLine": 212,
+          "lastColumn": 150,
+          "firstColumn": 145,
+          "message": "Unclosed element “span”.",
+          "extract": "ibilidad. <span>Etique",
+          "hiliteStart": 10,
+          "hiliteLength": 6
+        },
+        {
+          "type": "error",
+          "lastLine": 228,
+          "lastColumn": 49,
+          "firstColumn": 9,
+          "message": "Attribute “los-menues-debens-ser-accesibles” not allowed on element “p” at this point.",
+          "extract": ">\n        <p los-menues-debens-ser-accesibles=\"sí\">Los me",
+          "hiliteStart": 10,
+          "hiliteLength": 41
+        },
+        {
+          "type": "info",
+          "lastLine": 217,
+          "lastColumn": 28,
+          "firstColumn": 5,
+          "subType": "warning",
+          "message": "Section lacks heading. Consider using “h2”-“h6” elements to add identifying headings to all sections, or else use a “div” element instead for any cases where no heading is needed.",
+          "extract": "o -->\n    <section id=\"guia-html\">\n     ",
+          "hiliteStart": 10,
+          "hiliteLength": 24
+        },
+        {
+          "type": "info",
+          "lastLine": 233,
+          "lastColumn": 65,
+          "firstColumn": 5,
+          "subType": "warning",
+          "message": "Section lacks heading. Consider using “h2”-“h6” elements to add identifying headings to all sections, or else use a “div” element instead for any cases where no heading is needed.",
+          "extract": "s -->\n    <section id=\"diseno-web\" aria-labelledby=\"titulo-diseno-web\">\n    <",
+          "hiliteStart": 10,
+          "hiliteLength": 61
+        },
+        {
+          "type": "error",
+          "lastLine": 255,
+          "lastColumn": 34,
+          "message": "Duplicate attribute “role”.",
+          "extract": "ntentinfo\" role=\"footer\">\n    ",
+          "hiliteStart": 15,
+          "hiliteLength": 1
+        },
+        {
+          "type": "info",
+          "lastLine": 255,
+          "lastColumn": 43,
+          "firstColumn": 3,
+          "subType": "warning",
+          "message": "The “contentinfo” role is unnecessary for element “footer”.",
+          "extract": "cto -->\n  <footer role=\"contentinfo\" role=\"footer\">\n    <",
+          "hiliteStart": 10,
+          "hiliteLength": 41
+        },
+        {
+          "type": "error",
+          "lastLine": 164,
+          "lastColumn": 104,
+          "firstColumn": 13,
+          "message": "The “aria-labelledby” attribute references “boton-inexistente”, which is not the ID of any element in this document.",
+          "extract": "          <ul id=\"menu-servicios\" class=\"submenu\" hidden=\"hidden\" aria-labelledby=\"boton-inexistente\">\n     ",
+          "hiliteStart": 10,
+          "hiliteLength": 92
+        },
+        {
+          "type": "error",
+          "lastLine": 218,
+          "lastColumn": 51,
+          "firstColumn": 7,
+          "message": "The “aria-labelledby” attribute references “titulo-estructura”, which is not the ID of any element in this document.",
+          "extract": "l\">\n      <article aria-labelledby=\"titulo-estructura\">\n     ",
+          "hiliteStart": 10,
+          "hiliteLength": 45
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "estado": {
+    "good": "SIN VIOLACIONES DETECTADAS (requiere revisión manual)",
+    "bad": "AUDITORÍA NO CONFIABLE (cobertura baja / HTML malformado)"
+  },
+  "coverage": {
+    "good": 21,
+    "bad": 4
+  },
+  "quien_cumple": "INDETERMINADO",
+  "resumen": {
+    "good": {
+      "violations": 0,
+      "incomplete": 2,
+      "passes": 19
+    },
+    "bad": {
+      "violations": 0,
+      "incomplete": 0,
+      "passes": 4
+    }
+  },
+  "donde_no_cumple": {
+    "good_violations": [],
+    "bad_violations": []
+  },
+  "nota": "Automático con axe-core (WCAG 2.1 A/AA). Para conformidad total, complementar con revisión manual.",
+  "log_correcciones_formateado": [
+    "linea 2: Fix: <html> con un solo lang=\"es-ES\". | BEFORE: <html lang=\"es-ES\" lang=\"en\"> | AFTER: <html lang=\"es-ES\">",
+    "linea 4: Fix: eliminado <meta charset=\"utf8\"> (incorrecto). | BEFORE: <meta charset=\"utf8\">  | AFTER: ",
+    "linea 5: Fix: <title> corregido (cierre faltante). | BEFORE: <title>Fase 1 Ejemplo de página accesible<title> | AFTER: <title>\\1</title>",
+    "linea 7: Fix: meta viewport correcto (coma). | BEFORE: content=\"width=device-width initial-scale=1\" | AFTER: content=\"width=device-width, initial-scale=1\"",
+    "linea 31: Fix: foco visible (no outline:none). | BEFORE: outline: none; | AFTER: outline: 3px solid #ff9900;\n      outline-offset: 2px;",
+    "linea 131: Fix: skip-link apunta a #contenido-principal. | BEFORE: href=\"#contenido-principal noexistente\" | AFTER: href=\"#contenido-principal\"",
+    "linea 210: Fix: landmark principal: <main id=\"contenido-principal\">. | BEFORE: <div role=\"main\" id=\"contenido\"> | AFTER: <main id=\"contenido-principal\">",
+    "linea 253: Fix: cierre de <main> (antes era </div>). | BEFORE: </div>\n\n  <!-- footer | AFTER: </main>\n\n  <!-- footer",
+    "linea 258: Fix: enlace email mailto: (mail: -> mailto:). | BEFORE: href=\"mail:info@ejemploaccesible.es\" | AFTER: href=\"mailto:\\1\"",
+    "linea 230: Fix: <img src=\"banner.png\"> con alt. | BEFORE: <img src=\"banner.png\"> | AFTER: <img src=\"banner.png\" alt=\"Banner del sitio\">",
+    "linea 240: Fix: IDs únicos (segundo diseno-web -> diseno-web-2). | BEFORE: id=\"diseno-web\" | AFTER: id=\"diseno-web-2\"",
+    "linea 157: Fix: aria-expanded (falso -> false). | BEFORE: aria-expanded=\"falso\" | AFTER: aria-expanded=\"false\"",
+    "linea 156: Fix: aria-haspopup (menuu -> menu). | BEFORE: aria-haspopup=\"menuu\" | AFTER: aria-haspopup=\"menu\"",
+    "linea 162: Fix: aria-hidden (falso -> true). | BEFORE: aria-hidden=\"falso\" | AFTER: aria-hidden=\"true\"",
+    "linea 201: Fix: aria-pressed (talvez -> false). | BEFORE: aria-pressed=\"talvez\" | AFTER: aria-pressed=\"false\""
+  ]
+}

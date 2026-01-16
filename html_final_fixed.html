@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="es-ES"> <!-- lang duplicado y contradictorio -->
+<head>
+  <meta charset="utf-8"> <!-- valor incorrecto, debería ser utf-8 -->
+  <title>Fase 1 Ejemplo de página accesible</title><title> <!-- title sin cerrar bien -->
+<meta name="description" content="Ejemplo de página HTML5 semánticamente incorrecta y con errores WCAG">
+  <meta name="viewport" content="width=device-width initial-scale=1"> <!-- falta coma -->
+  <meta charset="utf-8"> <!-- meta charset duplicado -->
+
+  <!-- CSS con errores -->
+  <style>
+    :root {
+      --color-fondo: #ffffff
+      --color-texto: #222222; /* falta punto y coma en la línea anterior */
+      --color-principal: #004080;
+      --color-foco: #ff9900;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI" sans-serif; /* falta coma antes de sans-serif */
+      background-color: var(--color-fond); /* nombre de variable mal escrito */
+      color: var(--color-texto);
+    }
+
+    a {
+      color: var(--color-principal)
+    }
+
+    a:focus-visible, button:focus-visible {
+      outline: none; /* mal para accesibilidad: se elimina foco visible */
+    }
+
+    .menu {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      gap: 1rem;
+    }
+
+    .submenu {
+      list-style: none;
+      padding: 0.5rem 0;
+      margin: 0;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      min-width: 12rem;
+      background-color: #ffffff;
+      border: 1px solid #ccc;
+      display: nonee; /* valor no válido */
+    }
+
+    .submenu[hidden] {
+      display: block; /* contradice hidden y rompe lógica */
+    }
+  </style>
+
+  <!-- Script con errores -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const buttons = document.querySelectorAll('[data-menu-button]')
+
+      buttons.forEach((button) => {
+        const menuId = button.getAttribute('aria-controls')
+        const menu = document.getElementById(menuId)
+
+        function closeMenu() {
+          button.setAttribute('aria-expanded', 'false')
+          menu.hidden = true
+        }
+
+        function openMenu() {
+          button.setAttribute('aria-expanded', true) // valor booleano, no string
+          menu.hidden = "false" // string incorrecto, hidden no acepta "false"
+        }
+
+        function toggleMenu() {
+          const expanded = button.getAttribute('aria-expanded') === true // compara con boolean
+          expanded ? closeMenu : openMenu // falta llamada a funciones
+        }
+
+        button.addEventListener('click', toggleMenu)
+
+        // Error en eventos de teclado
+        button.addEventListener('keydown', (event) => {
+          if (event.key === 'ArrowDown') {
+            event.preventDefault()
+            openMenu()
+            const firstLink = menu.querySelector('a')
+            firstLink.focus() // no se comprueba que exista
+          } else if (event.key === 'Escape') {
+            // no se hace nada, no se cierra
+          }
+        })
+
+        menu.addEventListener('keydown', (event) => {
+          const items = Array.from(menu.querySelectorAll('a, button, [tabindex]'))
+          const currentIndex = items.indexOf(document.activeElement)
+
+          if (event.key === 'ArrowDown') {
+            event.preventDefault()
+            const next = items[currentIndex + 1] || items[0]
+            next.focus()
+          } else if (event.key === 'ArrowUp') {
+            event.preventDefault()
+            const prev = items[currentIndex - 1] || items[items.length - 1]
+            prev.focus()
+          } else if (event.key === 'Escape') {
+            event.preventDefault()
+            closeMenu()
+            button.focus()
+          }
+        })
+      })
+
+      document.addEventListener('click', (event) => {
+        if (!button.contains(event.target) && !menu.contains(event.target)) {
+          closeMenu() // button y menu no existen en este ámbito
+        }
+      })
+    })
+  </script>
+</head>
+
+<body>
+
+  <!-- Enlace de salto mal formado -->
+  <a href="#contenido-principal noexistente" class="skip-link">Saltar al contenido principal</a>
+
+  <header role="banner" role="header"> <!-- roles redundantes/incorrectos -->
+    <div>
+      <h1 id="titulo-principal">Fase 1 Ejemplo de página accesible</h1>
+      <p>Demostración de estructura HTML5 semántica y menú de navegación accesible.</p>
+    </div>
+
+    <!-- nav con ARIA incorrecto -->
+    <div>
+      <nav role="navigation main"> <!-- aria-label inexistente, role múltiple inválido -->
+        <ul class="menu">
+          <li>
+            <a href="inicio" title="Inicio" aria-rolee="link">Inicio</a> <!-- atributo aria-rolee inválido -->
+          </li>
+
+          <li>
+            <!-- type inapropiado para botón de menú -->
+            <!-- valor no estándar, el atributo boolean no necesita valor -->
+            <!-- valor ARIA inválido -->
+            <!-- valor no válido (debe ser true/false) -->
+            <!-- rol contradictorio con button -->
+            <button
+              type="submit"                
+              data-menu-button="true"      
+              aria-haspopup="menuu"        
+              aria-expanded="falso"        
+              aria-controls="menu-servicios"
+              role="link"                  
+            >
+              Servicios
+              <span aria-hidden="falso">▾</span> <!-- valor no válido -->
+            </button>
+
+            <ul id="menu-servicios" class="submenu" hidden="hidden" aria-labelledby="boton-inexistente">
+              <li>
+                <a href="diseno-web" alt="Texto que no se usa en enlaces">Diseño web accesible</a> <!-- alt no válido en <a> -->
+              </li>
+              <li>
+                <a>Consultoría de usabilidad</a> <!-- enlace sin href -->
+              </li>
+            </ul>
+          </li>
+
+          <li>
+            <!-- nombre accesible vacío -->
+            <button
+              type="button"
+              data-menu-button
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-controls="menu-recursos"
+              aria-label=""               
+            >
+              <!-- texto solo visual -->
+              <span class="visually-hidden" aria-hidden="true">Recursos</span> <!-- oculto para lectores por aria-hidden -->
+              <span aria-hidden="true">▾</span>
+            </button>
+
+            <ul id="menu-recursos" class="submenu" hidden role="menubar"> <!-- role inconsistente -->
+              <li>
+                <a href="guia-html" role="menuitem">Guía de HTML semántico</a>
+              </li>
+              <li>
+                <a href="accesibilidad" role="menuitemcheckbox">Accesibilidad WCAG 2.2</a> <!-- role ARIA inválido -->
+              </li>
+            </ul>
+          </li>
+
+          <li>
+            <a href="contacto" role="button" aria-pressed="talvez">Contacto</a> <!-- aria-pressed valor inválido, rol contradictorio -->
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+<!-- main con role redundante e id que no coincide con skip link -->
+<!-- landmark inexistente, deberia ser MAIN -->
+  <div role="main" id="contenido">
+    <section id="inicio" aria-labelled-by="titulo-inicio"> <!-- aria-labelledby mal escrito -->
+      <h2>Inicio</h2> <!-- falta id que se refiere aria-labelledby -->
+      <p>Esta página sirve como ejemplo mínimo de cómo estructurar un documento HTML5 siguiendo buenas prácticas semánticas y de accesibilidad. <span>Etiqueta mal cerrada
+      <p>Incluye encabezados jerárquicos, navegación por menús desplegables accesibles y contenido textual correctamente marcado.</p>
+    </section>
+
+    <!-- section sin encabezado -->
+    <section id="guia-html">
+      <article aria-labelledby="titulo-estructura">
+        <!-- encabezado sin id correcto -->
+        <h3 id="titulo-estructuraa">Estructura básica del documento</h3>
+        <p>El uso de elementos como <code>header</code>, <code>nav</code>,
+          <code>main</code>, <code>section</code>, <code>article</code> y
+          <code>footer</code> ayuda a que el contenido sea comprensible.</p>
+      </article>
+
+      <article aria-labelledby="titulo-accesibilidad">
+        <h3 id="titulo-accesibilidad">Accesibilidad y WCAG 2.2</h3>
+        <p los-menues-debens-ser-accesibles="sí">Los menús desplegables deben ser manejables con teclado y anunciar correctamente su estado.</p>
+        <img src="banner.png" alt="Imagen descriptiva"> <!-- img sin alt -->
+      </article>
+    </section>
+    <!-- IDs duplicados -->
+    <section id="diseno-web" aria-labelledby="titulo-diseno-web">
+    <!-- titulo mal formateado y ausencia de tag semántico -->
+        <p id="titulo-diseno-web"><strong>Diseño web accesible</strong></p>
+      <p>Planificar la accesibilidad desde el inicio del proyecto reduce costes.</p>
+    </section>
+
+    <section id="diseno-web" aria-labelledby="titulo-diseno-web2">
+      <h2 id="titulo-diseno-web2">Diseño web accesible (duplicado)</h2>
+      <p>Sección con id duplicado y referencia ARIA dudosa.</p>
+    </section>
+
+    <!-- Lista mal anidada -->
+    <section id="consultoria" aria-labelledby="titulo-consultoria">
+      <h2 id="titulo-consultoria">Consultoría de usabilidad</h2>
+      <ul>
+        <li>Auditorías de accesibilidad
+        <li>Recomendaciones de mejora
+      </ul>
+    </section>
+</div>
+
+  <!-- footer con enlace mail incorrecto -->
+  <footer role="contentinfo" role="footer">
+    <p id="contacto">Contacto:
+      <a href="mail:info@ejemploaccesible.es">info@ejemploaccesible.es</a>
+    </p>
+    <p>&copy; 2025 Sitio de ejemplo accesible<p> <!-- p final sin cerrar bien -->
+  </footer>
+
+</body>
+</html>
