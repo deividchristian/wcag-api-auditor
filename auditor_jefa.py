@@ -79,14 +79,10 @@ def process_wcag_audit(html_content: str, filename: str = "archivo.html") -> dic
         "",
         "✅ ¡ÉXITO! Análisis completado.",
         "-" * 50,
-        f"🆔 Job ID: {job_id}",
         f"🪓 Axe Violations: {metrics['axe']} (Antes de corrección)",
         f"🌐 W3C Errors: {metrics['w3c']}",
         f"🛠️ Correcciones aplicadas: {len(formatted_logs)}",
         f"🧠 Alertas Manuales (Humano): {len(manual_alerts)}", # Agregada corrección humana
-        "-" * 50,
-        f"📂 Reporte generado: {report_name}",
-        f"💾 Archivo arreglado: {fixed_name}",
         ""
     ]
     formatted_console = "\n".join(console_buffer)
