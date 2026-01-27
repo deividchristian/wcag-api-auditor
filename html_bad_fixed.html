@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="es-ES" lang="en"> <!-- lang duplicado y contradictorio -->
+<html lang="es-ES"> <!-- lang duplicado y contradictorio -->
 <head>
-  <meta charset="utf8"> <!-- valor incorrecto, debería ser utf-8 -->
-  <title>Fase 1 Ejemplo de página accesible<title> <!-- title sin cerrar bien -->
+  <!-- valor incorrecto, debería ser utf-8 -->
+  <title>Fase 1 Ejemplo de página accesible</title> <!-- title sin cerrar bien -->
 <meta name="description" content="Ejemplo de página HTML5 semánticamente incorrecta y con errores WCAG">
-  <meta name="viewport" content="width=device-width initial-scale=1"> <!-- falta coma -->
+  <meta name="viewport" content="width=device-width, initial-scale=1"> <!-- falta coma -->
   <meta charset="utf-8"> <!-- meta charset duplicado -->
 
   <!-- CSS con errores -->
@@ -28,7 +28,8 @@
     }
 
     a:focus-visible, button:focus-visible {
-      outline: none; /* mal para accesibilidad: se elimina foco visible */
+      outline: 3px solid #ff9900;
+      outline-offset: 2px; /* mal para accesibilidad: se elimina foco visible */
     }
 
     .menu {
@@ -127,7 +128,7 @@
 <body>
 
   <!-- Enlace de salto mal formado -->
-  <a href="#contenido-principal noexistente" class="skip-link">Saltar al contenido principal</a>
+  <a href="#contenido-principal" class="skip-link">Saltar al contenido principal</a>
 
   <header role="banner" role="header"> <!-- roles redundantes/incorrectos -->
     <div>
@@ -152,13 +153,13 @@
             <button
               type="submit"                
               data-menu-button="true"      
-              aria-haspopup="menuu"        
-              aria-expanded="falso"        
+              aria-haspopup="menu"        
+              aria-expanded="false"        
               aria-controls="menu-servicios"
               role="link"                  
             >
               Servicios
-              <span aria-hidden="falso">▾</span> <!-- valor no válido -->
+              <span aria-hidden="true">▾</span> <!-- valor no válido -->
             </button>
 
             <ul id="menu-servicios" class="submenu" hidden="hidden" aria-labelledby="boton-inexistente">
@@ -197,7 +198,7 @@
           </li>
 
           <li>
-            <a href="contacto" role="button" aria-pressed="talvez">Contacto</a> <!-- aria-pressed valor inválido, rol contradictorio -->
+            <a href="contacto" role="button" aria-pressed="false">Contacto</a> <!-- aria-pressed valor inválido, rol contradictorio -->
           </li>
         </ul>
       </nav>
@@ -206,7 +207,7 @@
 
 <!-- main con role redundante e id que no coincide con skip link -->
 <!-- landmark inexistente, deberia ser MAIN -->
-  <div role="main" id="contenido">
+  <main id="contenido-principal">
     <section id="inicio" aria-labelled-by="titulo-inicio"> <!-- aria-labelledby mal escrito -->
       <h2>Inicio</h2> <!-- falta id que se refiere aria-labelledby -->
       <p>Esta página sirve como ejemplo mínimo de cómo estructurar un documento HTML5 siguiendo buenas prácticas semánticas y de accesibilidad. <span>Etiqueta mal cerrada
@@ -226,7 +227,7 @@
       <article aria-labelledby="titulo-accesibilidad">
         <h3 id="titulo-accesibilidad">Accesibilidad y WCAG 2.2</h3>
         <p los-menues-debens-ser-accesibles="sí">Los menús desplegables deben ser manejables con teclado y anunciar correctamente su estado.</p>
-        <img src="banner.png" alt="Imagen descriptiva"> <!-- img sin alt -->
+        <img src="banner.png" alt="Banner del sitio"> <!-- img sin alt -->
       </article>
     </section>
     <!-- IDs duplicados -->
@@ -236,7 +237,7 @@
       <p>Planificar la accesibilidad desde el inicio del proyecto reduce costes.</p>
     </section>
 
-    <section id="diseno-web" aria-labelledby="titulo-diseno-web2">
+    <section id="diseno-web-2" aria-labelledby="titulo-diseno-web2">
       <h2 id="titulo-diseno-web2">Diseño web accesible (duplicado)</h2>
       <p>Sección con id duplicado y referencia ARIA dudosa.</p>
     </section>
@@ -249,12 +250,12 @@
         <li>Recomendaciones de mejora
       </ul>
     </section>
-</div>
+</main>
 
   <!-- footer con enlace mail incorrecto -->
   <footer role="contentinfo" role="footer">
     <p id="contacto">Contacto:
-      <a href="mail:info@ejemploaccesible.es">info@ejemploaccesible.es</a>
+      <a href="mailto:info@ejemploaccesible.es">info@ejemploaccesible.es</a>
     </p>
     <p>&copy; 2025 Sitio de ejemplo accesible<p> <!-- p final sin cerrar bien -->
   </footer>

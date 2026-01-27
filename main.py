@@ -1,143 +1,56 @@
-import os
-import shutil
-import threading
-import uuid
-from http.server import SimpleHTTPRequestHandler, HTTPServer
-from contextlib import asynccontextmanager
-from typing import Optional
-
-from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.concurrency import run_in_threadpool  # <--- IMPORTANTE
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
-# Importamos tus módulos probados
-from modules import axe_engine, auto_fixer, auditors
+# --- IMPORTACIÓN NUEVA ---
+# Importamos la lógica orquestadora que creamos en auditor_jefa.py
+from auditor_jefa import process_wcag_audit
 
-# --- CONFIGURACIÓN DEL SERVIDOR EFÍMERO ---
-SERVER_PORT = 8099
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TEMP_DIR = os.path.join(BASE_DIR, "temp_audits")
+app = FastAPI(title="WCAG Auditor API (Regex Optimized)")
 
-os.makedirs(TEMP_DIR, exist_ok=True)
-
-class QuietHandler(SimpleHTTPRequestHandler):
-    def log_message(self, format, *args):
-        pass
-
-def start_background_server():
-    """Inicia un servidor estático para servir los archivos temporales a Lighthouse."""
-    try:
-        server = HTTPServer(('0.0.0.0', SERVER_PORT), QuietHandler)
-        server.root_directory = TEMP_DIR
-        os.chdir(TEMP_DIR)
-        
-        thread = threading.Thread(target=server.serve_forever)
-        thread.daemon = True
-        thread.start()
-        print(f"🌍 Servidor Interno de Auditoría activo en puerto {SERVER_PORT}")
-    except OSError:
-        print("⚠️ El servidor interno ya estaba corriendo (esto es normal en reloads).")
-
-# --- LIFESPAN ---
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    current = os.getcwd()
-    start_background_server()
-    os.chdir(current) 
-    yield
-
-app = FastAPI(title="WCAG Auditor API (Hybrid)", lifespan=lifespan)
+# Configuración CORS (Importante para que Copilot/Power Automate puedan hablarle)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # --- MODELOS ---
 class AuditRequest(BaseModel):
+    # Power Automate enviará el HTML como texto dentro de este campo JSON
     html_content: str
-    run_fixer: bool = True
+    filename: str = "archivo_desde_copilot.html" # Opcional, nombre por defecto
 
 # --- ENDPOINTS ---
 @app.get("/")
 def read_root():
-    return {"status": "Online", "mode": "Hybrid (Python + Node)"}
+    return {
+        "status": "Online", 
+        "mode": "Fast Regex Audit",
+        "description": "API optimizada para Microsoft Copilot Studio"
+    }
 
 @app.post("/audit")
-async def audit_html(request: AuditRequest, background_tasks: BackgroundTasks):
+async def audit_html(request: AuditRequest):
+    """
+    Endpoint principal.
+    Recibe el HTML crudo, lo limpia, lo analiza y retorna el JSON estructurado.
+    """
     try:
-        # 1. Gestión de Archivos Temporales
-        job_id = str(uuid.uuid4())
-        filename = f"{job_id}.html"
-        fixed_filename = f"{job_id}_fixed.html"
+        # Llamamos a tu función 'Jefa' directamente.
+        # Ya no necesitamos crear archivos temporales ni hilos complejos.
+        resultado = process_wcag_audit(request.html_content, request.filename)
         
-        file_path = os.path.join(TEMP_DIR, filename)
-        fixed_path = os.path.join(TEMP_DIR, fixed_filename)
-        
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(request.html_content)
-
-        target_url = f"http://localhost:{SERVER_PORT}/{filename}"
-        
-        # 2. Cargar Axe
-        axe_src = axe_engine.load_axe_source("axe.min.js")
-
-        results = {
-            "job_id": job_id,
-            "status": "completed",
-            "audit_initial": {},
-            "fixes_applied": [],
-            "fixed_html_preview": None
-        }
-
-        # 3. FASE 1: Auditoría Inicial
-        print(f"Running audit for {job_id}...")
-        
-        # --- CORRECCIÓN CRÍTICA AQUI ---
-        # Usamos await run_in_threadpool(...) para sacar la ejecución del bucle principal
-        
-        # A) Axe (El que causaba el error 500)
-        print("   ... running Axe")
-        axe_raw = await run_in_threadpool(axe_engine.run_axe_audit, target_url, axe_src)
-        results["audit_initial"]["axe"] = axe_engine.summarize_axe(axe_raw)
-        
-        # B) Lighthouse (También es lento, mejor en hilo aparte)
-        print("   ... running Lighthouse")
-        results["audit_initial"]["lighthouse"] = await run_in_threadpool(auditors.run_lighthouse, target_url)
-        
-        # C) Pa11y
-        print("   ... running Pa11y")
-        results["audit_initial"]["pa11y"] = await run_in_threadpool(auditors.run_pa11y, target_url)
-        
-        # D) W3C
-        print("   ... running W3C")
-        results["audit_initial"]["w3c"] = await run_in_threadpool(auditors.run_w3c_validator, file_path)
-
-        # 4. FASE 2: Auto-Fixer
-        if request.run_fixer:
-            print("   ... running Fixer")
-            # El fixer es puro regex rápido, podría ir directo, pero lo aislamos por consistencia
-            fixed_html, changes = await run_in_threadpool(auto_fixer.best_effort_fix_html, request.html_content)
-            
-            with open(fixed_path, "w", encoding="utf-8") as f:
-                f.write(fixed_html)
-                
-            results["fixes_applied"] = changes
-            results["fixed_html_preview"] = fixed_html[:500] + "... (truncated)"
-            results["full_fixed_html"] = fixed_html
-
-        background_tasks.add_task(cleanup_files, [file_path, fixed_path])
-
-        return results
+        return resultado
 
     except Exception as e:
-        print(f"Error CRITICO: {e}")
-        # Importante: Imprimir el stack trace en los logs de Render para debug
-        import traceback
-        traceback.print_exc()
+        print(f"❌ Error procesando solicitud: {str(e)}")
+        # Retornamos un 500 limpio si algo explota
         raise HTTPException(status_code=500, detail=str(e))
 
-def cleanup_files(paths):
-    import time
-    time.sleep(5)
-    for p in paths:
-        try:
-            if os.path.exists(p):
-                os.remove(p)
-        except Exception:
-            pass
+if __name__ == "__main__":
+    import uvicorn
+    # Esto permite correrlo localmente para pruebas con: python main.py
+    uvicorn.run(app, host="0.0.0.0", port=8099)

@@ -1,7 +1,5 @@
-fastapi
-uvicorn
-pydantic
-playwright
+fastapi>=0.109.0
+uvicorn>=0.27.0
+pydantic>=2.6.0
+python-multipart
 requests
-aiofiles
-

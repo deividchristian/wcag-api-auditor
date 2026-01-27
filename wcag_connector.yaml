@@ -1,0 +1,54 @@
+swagger: '2.0'
+info:
+  title: WCAG Auditor API
+  description: API que audita código HTML usando Lighthouse, Axe y Pa11y, y aplica correcciones automáticas.
+  version: '1.0'
+host: wcag-api-auditor.onrender.com
+basePath: /
+schemes:
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /audit:
+    post:
+      summary: Auditar y Reparar HTML
+      description: Envía código HTML sucio y recibe un reporte de accesibilidad y el código corregido.
+      operationId: AuditHtml
+      parameters:
+        - in: body
+          name: body
+          description: Objeto JSON con el HTML
+          required: true
+          schema:
+            type: object
+            properties:
+              html_content:
+                type: string
+                description: El código HTML completo a auditar.
+              run_fixer:
+                type: boolean
+                default: true
+                description: Si es true, aplica correcciones automáticas.
+      responses:
+        '200':
+          description: Auditoría exitosa
+          schema:
+            type: object
+            properties:
+              job_id:
+                type: string
+              audit_initial:
+                type: object
+                description: Resultados de Lighthouse, Axe y W3C.
+              fixes_applied:
+                type: array
+                items:
+                  type: object
+              full_fixed_html:
+                type: string
+                description: El código HTML ya reparado.
+        '500':
+          description: Error del servidor
