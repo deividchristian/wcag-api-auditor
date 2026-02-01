@@ -3,6 +3,7 @@ import datetime
 import json
 import os
 import argparse
+import time
 from modules.auto_fixer import AutoFixer
 
 def simulate_audit_scan(html_content, fixes_count):
@@ -23,40 +24,50 @@ def simulate_audit_scan(html_content, fixes_count):
 
 def process_wcag_audit(html_content: str, filename: str = "archivo.html") -> dict:
     """
-    API ENTRYPOINT: Genera el reporte JSON híbrido con métricas de tiempo.
+    API ENTRYPOINT: Genera el reporte con métricas de tiempo REALISTAS (Nivel Senior).
     """
     job_id = str(uuid.uuid4())
-    start_time = datetime.datetime.now()
+    # Usamos perf_counter para precisión de microsegundos real
+    start_time = time.perf_counter()
 
     # 1. Ejecutar AutoFixer
     fixer = AutoFixer(html_content)
     fixed_html, fixes_list, manual_alerts = fixer.run()
     
-    # 2. Simular Auditoría
+    # 2. Simular Auditoría Técnica
     metrics = simulate_audit_scan(html_content, len(fixes_list))
 
-    # --- CÁLCULO DE AHORRO DE TIEMPO (ROI) ---
-    end_time = datetime.datetime.now()
-    duration = (end_time - start_time).total_seconds()
+    # --- CÁLCULO DE TIEMPOS (REALISMO PURO) ---
+    end_time = time.perf_counter()
+    duration_seconds = end_time - start_time
     
-    # Lógica: Un dev tarda ~8 mins promedio en encontrar, arreglar y probar cada error.
-    human_minutes_saved = (len(fixes_list) * 2.0) + 5
+    # MÉTRICA HUMANA (Modelo "Senior Dev"):
+    # 1. Lectura: Un humano tarda ~1 seg en leer/escanear una línea de código.
+    # 2. Acción: Un humano tarda ~45 seg en corregir, guardar y verificar un error puntual.
+    # 3. Setup: 2 minutos fijos de abrir editor y preparar entorno.
     
+    total_lines = len(html_content.split('\n'))
+    total_errors = len(fixes_list)
     
-    # Formatear tiempo humano (Ej: "2h 15m" o "40m")
-    if human_minutes_saved >= 60:
-        h = int(human_minutes_saved // 60)
-        m = int(human_minutes_saved % 60)
+    human_seconds = (total_lines * 1.0) + (total_errors * 45.0) + (2 * 60)
+    human_minutes = human_seconds / 60
+    
+    # Formateo Inteligente
+    if human_minutes >= 60:
+        h = int(human_minutes // 60)
+        m = int(human_minutes % 60)
         saved_text = f"{h}h {m}m"
     else:
-        saved_text = f"{int(human_minutes_saved)} min"
+        saved_text = f"{int(human_minutes)} min"
+
+    # Formateo de IA (Si es menos de 0.01, mostramos "< 0.01s" para no poner 0.00)
+    ai_time_text = f"{duration_seconds:.3f}s" if duration_seconds > 0.001 else "< 0.001s"
 
     # --- 3. GENERACIÓN DE REPORTES ---
     formatted_logs = []
     for fix in fixes_list:
         clean_before = fix['before'].replace('\n', ' ').strip()
         clean_after = fix['after'].replace('\n', ' ').strip()
-        
         log_entry = (
             f"linea {fix['line']}: {fix['rule']} | "
             f"BEFORE: {clean_before} | "
@@ -64,15 +75,13 @@ def process_wcag_audit(html_content: str, filename: str = "archivo.html") -> dic
         )
         formatted_logs.append(log_entry)
 
-    # Estructura JSON Final Actualizada
     report_json = {
         "resumen_ejecutivo": {
             "estado": "PARCIALMENTE_CORREGIDO" if manual_alerts else "CORREGIDO",
             "total_errores_detectados": len(fixes_list) + len(manual_alerts),
             "corregidos_por_bot": len(fixes_list),
             "pendientes_de_humano": len(manual_alerts),
-            # NUEVOS CAMPOS DE TIEMPO
-            "tiempo_ia_segundos": f"{duration:.2f}s",
+            "tiempo_ia_segundos": ai_time_text,
             "tiempo_humano_ahorrado": saved_text
         },
         "auditoria_tecnica": {
@@ -88,26 +97,21 @@ def process_wcag_audit(html_content: str, filename: str = "archivo.html") -> dic
     report_name = f"reporte_{base_name}.json"
     fixed_name = f"{base_name}_FIXED.html"
 
-    # --- 4. SALIDA VISUAL PARA CONSOLA/CHAT ---
-    console_buffer = [
-        f"🚀 Iniciando Auditoría Corporativa para: {filename}",
-        "📄 Leyendo estructura del archivo...",
-        "⏳ Analizando protocolos WCAG 2.1, Axe-core y W3C...",
-        "",
-        "✅ ¡ÉXITO! Análisis completado.",
-        "-" * 50,
-        f"🪓 Axe Violations: {metrics['axe']} (Antes de corrección)",
-        f"🌐 W3C Errors: {metrics['w3c']}",
-        f"🛠️ Correcciones aplicadas: {len(formatted_logs)}",
-        f"🧠 Alertas Manuales (Humano): {len(manual_alerts)}",
-        f"⏱️ Tiempo IA: {duration:.4f} seg",
-        f"💰 Tiempo Humano Ahorrado: {saved_text} (ROI)",
-        ""
-    ]
-    formatted_console = "\n".join(console_buffer)
+    # Construcción del Output de Consola Visual
+    console_summary = (
+        f"\n📊 Reporte de Auditoría\n"
+        f"-----------------------------------\n"
+        f"Estado:                     ✅ Finalizado con éxito\n"
+        f"🪓 Violaciones Críticas (Axe): {metrics['axe']}\n"
+        f"🌐 Errores de Estándar (W3C):  {metrics['w3c']}\n"
+        f"🛠️  Correcciones Aplicadas:     {len(fixes_list)}\n"
+        f"🧠 Revisión Manual Requerida:  {len(manual_alerts)}\n"
+        f"-----------------------------------\n"
+        f"⏳ Tiempo Ahorrado:           {saved_text}\n"
+    )
 
     return {
-        "console_output": formatted_console,
+        "console_output": console_summary,
         "report_json_content": report_json,
         "fixed_html_content": fixed_html,
         "_suggested_filenames": {
@@ -133,7 +137,7 @@ if __name__ == "__main__":
         filename_only = os.path.basename(args.archivo)
         result = process_wcag_audit(html_input, filename_only)
 
-        # Imprimimos resultados
+        # Imprimimos resultados visuales en consola
         print(result["console_output"])
 
         # Guardado de archivos
