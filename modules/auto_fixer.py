@@ -26,9 +26,12 @@ class AutoFixer:
             def replacer(match):
                 before_text = match.group(0)
                 try:
-                    after_text = match.expand(replacement)
+                    if callable(replacement):
+                        after_text = replacement(match)
+                    else:
+                        after_text = match.expand(replacement)
                 except Exception:
-                    after_text = replacement
+                    after_text = str(replacement)
                 
                 if conditional_check and before_text == after_text:
                     return before_text
@@ -51,16 +54,19 @@ class AutoFixer:
         if "charset" not in self.current_html.lower():
             self._apply_regex(r'(<head[^>]*>)', r'\1\n  <meta charset="UTF-8">', "Head: Inserción Charset faltante")
 
+        self._apply_regex(r'<title>\s*<title>', '<title>', "Head: Doble apertura title")
         self._apply_regex(r'<title>\s*</title>', '<title>Documento Accesible</title>', "Head: Title vacío rellenado")
-        self._apply_regex(r'<title>(.*?)<title>', r'<title>\1</title>', "Head: Cierre title malformado")
+        self._apply_regex(r'<title>([^<]+)<title>', r'<title>\1</title>', "Head: Cierre de <title> faltante")
         self._apply_regex(r'<title>(.*?)(?:<!--.*?-->)?</title>', r'<title>\1</title>', "Head: Limpieza comentarios en title")
+        
         if "<title>" not in self.current_html.lower():
             self._apply_regex(r'(<head[^>]*>)', r'\1\n  <title>Documento Accesible</title>', "Head: Inserción Title faltante")
 
         if not re.search(r'<meta\s+name=["\']viewport["\']', self.current_html, re.I):
              self._apply_regex(r'(<head[^>]*>)', r'\1\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">', "Head: Inserción Viewport")
         
-        self._apply_regex(r'content=["\']width=device-width\s+initial-scale=1(\.0)?["\']', 'content="width=device-width, initial-scale=1.0"', "Head: Sintaxis Viewport")
+        self._apply_regex(r'(content=["\'][^"\']*width=device-width)\s+(initial-scale)', r'\1, \2', "Head: Sintaxis Viewport (coma faltante)")
+        self._apply_regex(r'content=["\']width=device-width\s+initial-scale=1(\.0)?["\']', 'content="width=device-width, initial-scale=1.0"', "Head: Sintaxis Viewport standard")
         self._apply_regex(r'(viewport[^>]*content=["\'][^"\']*)\b(?:user-scalable=no|maximum-scale=1\.0|maximum-scale=1)\b', r'\1user-scalable=yes', "Head: Desbloquear zoom usuario")
 
     def _fix_css_and_styles(self):
@@ -76,28 +82,26 @@ class AutoFixer:
 
     def _fix_structure_and_semantics(self):
         if "<main" not in self.current_html.lower():
-            pattern = r'<div\s+([^>]*\b(role=["\']main["\']|id=["\'](?:main|content|contenido)["\'])[^>]*)>'
+            pattern = r'<div\s+([^>]*\b(role=["\']main["\']|id=["\'](?:contenido|main)["\'])[^>]*)>'
             def main_replacer(match):
-                attrs = re.sub(r'role=["\']main["\']', '', match.group(1))
+                attrs = match.group(1)
+                attrs = re.sub(r'role=["\']main["\']', '', attrs)
                 return f'<main {attrs}>'
-            self.current_html = re.sub(pattern, main_replacer, self.current_html, count=1, flags=re.I)
-            if "<main" in self.current_html:
-                self._log_change("Estructura", "div role=main", "main", 0)
+            self._apply_regex(pattern, main_replacer, "Semántica: div a main")
 
         self._apply_regex(r'<' + r'/div>(\s*(?:<!--[\s\S]*?-->\s*)*<footer)', r'\1', "Estructura: Eliminar div cierre huérfano antes de footer")
+        
+        self._apply_regex(r'(<p[^>]*>)(.*?)(?=\s*<div)', r'\1\2</p>', "HTML Sintaxis: <p> mal cerrado antes de div")
+        self._apply_regex(r'(<p[^>]*>.*?)(?=<p)', r'\1</p>', "HTML Sintaxis: <p> anidado prohibido")
         self._apply_regex(r'</p>Esta página', '<p>Esta página', "HTML: p invertido")
-        self._apply_regex(r'<p>(.*?)<p>', r'<p>\1</p>', "HTML: p mal cerrado")
         self._apply_regex(r'<span>([^<]+)(?!\s*</span>)', r'<span>\1</span>', "HTML: span abierto")
         self._apply_regex(r'<br\s+/>', '<br>', "HTML: XHTML br a HTML5")
         self._apply_regex(r'id="titulo-estructuraa"', 'id="titulo-estructura"', "HTML: Typo ID estructura")
-        self._apply_regex(r'<section id="diseno-web" aria-labelledby="titulo-diseno-web2">', '<section id="diseno-web-dup" aria-labelledby="titulo-diseno-web2">', "HTML: ID duplicado específico")
         
-        block_tags = r'(?:div|p|h[1-6]|ul|ol|table|form|blockquote|pre|address|main|header|footer|nav|section|article|aside|hr)'
-        self._apply_regex(rf'(<p[^>]*>)((?:(?!</p>).)*?)(?=\s*<(?:{block_tags})\b)', r'\1\2</p>', "Estructura: Cierre defensivo de p antes de bloque")
-
-        self._apply_regex(r'(<(?:ul|ol)[^>]*>)\s*(<(?:ul|ol)[^>]*>)', r'\1<li>\2', "Estructura: Listas anidadas wrapper li")
+        self._apply_regex(r'(<ul>\s*)<ul>', r'\1<li><ul>', "Estructura: ul dentro de ul sin li")
+        self._apply_regex(r'</ul>\s*</ul>', '</ul></li></ul>', "Estructura: cierre ul anidado")
         self._apply_regex(r'<li>(.*?)(?=\n\s*<li>|\n\s*</ul>)', r'<li>\1</li>', "HTML: li cierre automático")
-        
+
         self._apply_regex(r'<b>(.*?)</b>', r'<strong>\1</strong>', "Semántica: b a strong")
         self._apply_regex(r'<i>(.*?)</i>', r'<em>\1</em>', "Semántica: i a em")
         self._apply_regex(r'<center>(.*?)</center>', r'<div style="text-align:center">\1</div>', "W3C: Deprecado center")
@@ -110,6 +114,15 @@ class AutoFixer:
         self._apply_regex(r'(<[^>]+)bgcolor=["\'][^"\']*["\']', r'\1', "Clean: Atributo bgcolor")
         self._apply_regex(r'<td\s+headers=["\'][^"\']*["\']', '<td', "Clean: Headers complejos en TD")
         self._apply_regex(r'<table[^>]*\bsummary=["\'][^"\']*["\']', '<table', "W3C: Summary obsoleto")
+
+        all_ids = re.findall(r'id=["\']([^"\']+)["\']', self.current_html)
+        seen = set()
+        duplicates = [x for x in all_ids if x in seen or seen.add(x)]
+        
+        for dup_id in duplicates:
+            pattern = f'(id=["\']{re.escape(dup_id)}["\'].*?)id=["\']{re.escape(dup_id)}["\']'
+            replacement = f'\\1id="{dup_id}-dup"' 
+            self._apply_regex(pattern, replacement, f"HTML: ID duplicado '{dup_id}' corregido")
 
     def _fix_roles_and_aria(self):
         redundant_roles = [
@@ -142,7 +155,9 @@ class AutoFixer:
         self._apply_regex(r'data-menu-button=["\']true["\']', 'data-menu-button', "HTML: Boolean attribute normalización")
         self._apply_regex(r'hidden=["\']hidden["\']', 'hidden', "HTML: Hidden normalización")
         
-        self._apply_regex(r'(<input(?![^>]*aria-label)(?![^>]*type=["\'](?:hidden|submit|button|image)["\'])[^>]*placeholder=["\']([^"\']+)["\'][^>]*)>', r'\1 aria-label="\2">', "A11y: Placeholder a label")
+        self._apply_regex(r'(<input[^>]*placeholder=["\']([^"\']+)["\'])(?![^>]*aria-label)', r'\1 aria-label="\2"', "Form: Placeholder a aria-label")
+        self._apply_regex(r'(<input(?![^>]*aria-label)(?![^>]*type=["\'](?:hidden|submit|button|image)["\'])[^>]*placeholder=["\']([^"\']+)["\'][^>]*)>', r'\1 aria-label="\2">', "A11y: Placeholder a label regex fallback")
+        
         self._apply_regex(r'(<input[^>]*type=["\']email["\'])(?![^>]*autocomplete)', r'\1 autocomplete="email"', "Form: Autocomplete Email")
         self._apply_regex(r'(<input[^>]*type=["\']tel["\'])(?![^>]*autocomplete)', r'\1 autocomplete="tel"', "Form: Autocomplete Tel")
         
@@ -156,9 +171,9 @@ class AutoFixer:
     def _fix_links_images_cleanups(self):
         self._apply_regex(r'href="(?!http|#|mailto:)([a-zA-Z0-9-]+)"', r'href="#\1"', "Nav: Link interno fix")
         self._apply_regex(r'href="#contenido-principal\s+noexistente"', 'href="#contenido-principal"', "Nav: Skip link fix")
-        self._apply_regex(r'href=["\']mail:\s*', 'href="mailto:', "Link: Protocolo mail fix")
+        self._apply_regex(r'href=["\']mail:', 'href="mailto:', "Link: Protocolo mail fix")
         self._apply_regex(r'href=["\']tel:\s*', 'href="tel:', "Link: Protocolo tel fix")
-        self._apply_regex(r'(<a[^>]*target=["\']_blank["\'])(?![^>]*rel)', r'\1 rel="noopener noreferrer"', "Sec: Target blank seguro")
+        self._apply_regex(r'target="_blank"', 'target="_blank" rel="noopener"', "Seguridad: target blank")
         self._apply_regex(r'<a[^>]*href=["\'](?:#|javascript:void\(0\);?)["\'][^>]*>\s*</a>', '', "Limpieza: Link vacío")
         
         self._apply_regex(r'menu\.hidden\s*=\s*"false"', 'menu.hidden = false', "JS: String bool fix")
@@ -171,8 +186,9 @@ class AutoFixer:
         
         self._apply_regex(r'\.jgp["\']', '.jpg"', "Typo: Extensión jgp")
         self._apply_regex(r'\.pnj["\']', '.png"', "Typo: Extensión pnj")
-        self._apply_regex(r'(<img(?![^>]*alt=)[^>]*)(>)', r'\1 alt=""\2', "A11y: Alt vacío preventivo")
-        self._apply_regex(r'<img src="banner.png"(?: alt=".*?")?>', '<img src="banner.png" alt="Banner promocional genérico">', "A11y: Alt específico banner")
+        self._apply_regex(r'<img src="banner.png"(?!.*alt).*?>', '<img src="banner.png" alt="Banner promocional genérico">', "A11y: Alt parcheado banner")
+        self._apply_regex(r'(<img[^>]*alt="")', r'\1', "A11y: Alt vacío")
+        self._apply_regex(r'(<img(?![^>]*alt=)[^>]*)(>)', r'\1 alt=""\2', "A11y: Alt vacío preventivo fallback")
         self._apply_regex(r'(<img[^>]*)\stitle=["\'][^"\']*["\']', r'\1', "A11y: Eliminar title redundante en img")
 
         typos = {
@@ -203,7 +219,6 @@ class AutoFixer:
             ("marquee", "ALTA", "Obsolescencia", "Elemento marquee debe eliminarse."),
             ("blink", "ALTA", "Obsolescencia", "Elemento blink debe eliminarse."),
             ("user-scalable=no", "ALTA", "Zoom", "Bloqueo de zoom detectado."),
-            ("skip-link", "MEDIA", "Navegación", "Verificar visibilidad CSS al recibir foco."),
             ("color:", "ALTA", "Contraste", "Verificar ratio contraste manual 4.5:1."),
             ("background", "ALTA", "Contraste", "Verificar ratio contraste manual 4.5:1."),
         ]
@@ -212,11 +227,23 @@ class AutoFixer:
             if token in html:
                 self.manual_warnings.append({"prioridad": prio, "categoria": cat, "mensaje": msg})
 
+        if html.count("<h2") > 0 and html.count("<h1") == 0:
+             self.manual_warnings.append({"prioridad": "MEDIA", "categoria": "Semántica (Jerarquía)", "mensaje": "Se detectaron múltiples niveles de encabezados. Verificar que sigan un orden lógico (H1 -> H2 -> H3) sin saltos."})
+        
         if html.count("<h1") > 1:
             self.manual_warnings.append({"prioridad": "MEDIA", "categoria": "Estructura", "mensaje": "Múltiples H1 detectados."})
         
         if "<img" in html and "alt" in html:
-             self.manual_warnings.append({"prioridad": "ALTA", "categoria": "Semántica", "mensaje": "Verificar calidad descriptiva de textos alternativos."})
+             self.manual_warnings.append({"prioridad": "ALTA", "categoria": "Semántica Visual (Imágenes)", "mensaje": "Se han parcheado atributos ALT. Un humano debe verificar que la descripción coincida con la imagen real (no usar 'imagen de')."})
+
+        if "skip-link" in html or "saltar al contenido" in html:
+            self.manual_warnings.append({"prioridad": "MEDIA", "categoria": "Navegación (Skip Link)", "mensaje": "Se detectó enlace de salto. Verificar CSS: ¿Es visible al recibir el foco (focus)? ¿El ID destino existe?"})
+
+        if "<form" in html:
+             self.manual_warnings.append({"prioridad": "ALTA", "categoria": "Formularios (Etiquetas)", "mensaje": "Campos de formulario detectados. Verificar que 'aria-label' o '<label>' describan con precisión la acción esperada."})
+
+        if "<a href" in html:
+             self.manual_warnings.append({"prioridad": "BAJA", "categoria": "Navegación (Contexto)", "mensaje": "Enlaces detectados. Verificar manualmente que los destinos (href) lleven a páginas válidas y tengan sentido en contexto."})
 
     def run(self) -> Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]:
         self._fix_head_metadata()
@@ -231,18 +258,21 @@ class AutoFixer:
 if __name__ == "__main__":
     html_test = """
     <html lang="es" lang="en">
-    <head><meta http-equiv="Content-Type" content="text/html; charset=utf-88"><title></title></head>
+    <head><meta http-equiv="Content-Type" content="text/html; charset=utf-88"><title>Demo Accesibilidad<title></head>
     <body>
         <center><b>Título Antiguo</b></center>
         <div role="main" id="contenido">
-            <p>Texto sin cerrar <br />
+            <p>Texto sin cerrar <div class="bloque">Contenido</div>
             <ul><ul><li>Item</li></ul></ul>
             <input type="email" placeholder="Correo" los-menues-debens-ser-accesibles="sí">
             <a href="mail:test@test.com" target="_blank">Escríbeme</a>
             <img src="test.pnj" title="foto">
+            <img src="banner.png">
             <font size="3">Texto viejo</font>
             <div role="navigation main">Nav</div>
             <a href="#" class="skip-link">Saltar</a>
+            <div id="diseno-web">Uno</div>
+            <div id="diseno-web">Dos</div>
         </div>
     </body></html>
     """
