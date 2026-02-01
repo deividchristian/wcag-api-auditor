@@ -23,18 +23,32 @@ def simulate_audit_scan(html_content, fixes_count):
 
 def process_wcag_audit(html_content: str, filename: str = "archivo.html") -> dict:
     """
-    API ENTRYPOINT: Genera el reporte JSON híbrido (Automático + Humano).
+    API ENTRYPOINT: Genera el reporte JSON híbrido con métricas de tiempo.
     """
     job_id = str(uuid.uuid4())
     start_time = datetime.datetime.now()
 
-    # 1. Ejecutar AutoFixer (AHORA RECIBE 3 VALORES)
+    # 1. Ejecutar AutoFixer
     fixer = AutoFixer(html_content)
-    # --- AQUÍ ESTABA EL ERROR, YA CORREGIDO: ---
     fixed_html, fixes_list, manual_alerts = fixer.run()
     
     # 2. Simular Auditoría
     metrics = simulate_audit_scan(html_content, len(fixes_list))
+
+    # --- CÁLCULO DE AHORRO DE TIEMPO (ROI) ---
+    end_time = datetime.datetime.now()
+    duration = (end_time - start_time).total_seconds()
+    
+    # Lógica: Un dev tarda ~8 mins promedio en encontrar, arreglar y probar cada error.
+    human_minutes_saved = len(fixes_list) * 8 
+    
+    # Formatear tiempo humano (Ej: "2h 15m" o "40m")
+    if human_minutes_saved >= 60:
+        h = int(human_minutes_saved // 60)
+        m = int(human_minutes_saved % 60)
+        saved_text = f"{h}h {m}m"
+    else:
+        saved_text = f"{human_minutes_saved} min"
 
     # --- 3. GENERACIÓN DE REPORTES ---
     formatted_logs = []
@@ -43,19 +57,22 @@ def process_wcag_audit(html_content: str, filename: str = "archivo.html") -> dic
         clean_after = fix['after'].replace('\n', ' ').strip()
         
         log_entry = (
-            f"linea {fix['line']}: Fix: {fix['rule']} | "
+            f"linea {fix['line']}: {fix['rule']} | "
             f"BEFORE: {clean_before} | "
             f"AFTER: {clean_after}"
         )
         formatted_logs.append(log_entry)
 
-    # Estructura JSON Final (Incluye la sección humana)
+    # Estructura JSON Final Actualizada
     report_json = {
         "resumen_ejecutivo": {
             "estado": "PARCIALMENTE_CORREGIDO" if manual_alerts else "CORREGIDO",
             "total_errores_detectados": len(fixes_list) + len(manual_alerts),
             "corregidos_por_bot": len(fixes_list),
-            "pendientes_de_humano": len(manual_alerts)
+            "pendientes_de_humano": len(manual_alerts),
+            # NUEVOS CAMPOS DE TIEMPO
+            "tiempo_ia_segundos": f"{duration:.2f}s",
+            "tiempo_humano_ahorrado": saved_text
         },
         "auditoria_tecnica": {
             "axe_violations_estimadas": metrics['axe'],
@@ -63,10 +80,9 @@ def process_wcag_audit(html_content: str, filename: str = "archivo.html") -> dic
             "job_id": job_id
         },
         "log_automatico": formatted_logs,
-        "auditoria_manual_requerida": manual_alerts  # <--- Nueva sección crítica
+        "auditoria_manual_requerida": manual_alerts
     }
 
-    # Nombres de archivo
     base_name = os.path.splitext(filename)[0]
     report_name = f"reporte_{base_name}.json"
     fixed_name = f"{base_name}_FIXED.html"
@@ -82,7 +98,9 @@ def process_wcag_audit(html_content: str, filename: str = "archivo.html") -> dic
         f"🪓 Axe Violations: {metrics['axe']} (Antes de corrección)",
         f"🌐 W3C Errors: {metrics['w3c']}",
         f"🛠️ Correcciones aplicadas: {len(formatted_logs)}",
-        f"🧠 Alertas Manuales (Humano): {len(manual_alerts)}", # Agregada corrección humana
+        f"🧠 Alertas Manuales (Humano): {len(manual_alerts)}",
+        f"⏱️ Tiempo IA: {duration:.4f} seg",
+        f"💰 Tiempo Humano Ahorrado: {saved_text} (ROI)",
         ""
     ]
     formatted_console = "\n".join(console_buffer)
