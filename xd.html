@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es" lang="en">
+<head>
+<meta charset="utf8">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width initial-scale=1">
+<title>Demo Accesibilidad<title>
+<style>
+    a:focus, button:focus { outline: none; }
+    .muted { color:#888; background:#999; } /* contraste pobre */
+    .btn { padding:10px 14px; border:0; background:#ddd; color:#ddd; }
+</style>
+</head>
+ 
+<body>
+<a href="#contenido-principalx">Saltar al contenido</a>
+ 
+  <header>
+<img src="banner.png">
+<nav>
+<a href="#">Inicio</a>
+<a href="#">Productos</a>
+<a href="#">Contacto</a>
+</nav>
+</header>
+ 
+  <main id="contenido-principal">
+<h1>Bienvenido</h1>
+ 
+    <p class="muted">Texto con poco contraste para provocar un fallo AA.</p>
+ 
+    <h2 id="diseno-web">Sección</h2>
+<h2 id="diseno-web">Sección duplicada</h2>
+ 
+    <p>Este párrafo no se cierra bien
+<div>
+<p>Otro texto dentro de un div sin estructura adecuada.</p>
+</div>
+ 
+    <form>
+<div>
+<input id="email" type="email" placeholder="Correo">
+</div>
+<div>
+<input type="password" placeholder="Contraseña">
+</div>
+<div>
+<button aria-pressed="talvez">Entrar</button>
+</div>
+<div>
+<button aria-label="">Botón con aria-label vacío</button>
+</div>
+</form>
+ 
+    <p>
+<a href="mail:soporte@ejemplo.com">Escríbenos</a>
+</p>
+ 
+    <button aria-expanded="falso" aria-haspopup="menuu">Menú</button>
+ 
+    <div role="main" id="contenido">
+<p>Landmark principal duplicado e incorrecto.</p>
+</div>
+ 
+    <a href="#"><img src="icono.png" alt=""></a>
+</main>
+ 
+  <footer>
+<p>© 2026 Ejemplo</p>
+</footer>
+</body>
+</html>
