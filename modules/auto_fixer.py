@@ -81,6 +81,7 @@ class AutoFixer:
         self._apply_regex(r'style=["\'][^"\']*display:\s*none[^"\']*["\']', 'hidden', "HTML: Style display none a atributo hidden")
 
     def _fix_structure_and_semantics(self):
+        # 1. ARREGLO DE MAIN (Evitando duplicados)
         if "<main" not in self.current_html.lower():
             pattern = r'<div\s+([^>]*\b(role=["\']main["\']|id=["\'](?:contenido|main)["\'])[^>]*)>'
             def main_replacer(match):
@@ -89,31 +90,51 @@ class AutoFixer:
                 return f'<main {attrs}>'
             self._apply_regex(pattern, main_replacer, "Semántica: div a main")
 
-        self._apply_regex(r'<' + r'/div>(\s*(?:<!--[\s\S]*?-->\s*)*<footer)', r'\1', "Estructura: Eliminar div cierre huérfano antes de footer")
-        
+        # Reglas específicas (Legacy) - Está bien dejarlas
+        self._apply_regex(r'<' + r'/div>(\s*(?:\s*)*<footer)', r'\1', "Estructura: Eliminar div cierre huérfano antes de footer")
+        self._apply_regex(r'id="titulo-estructuraa"', 'id="titulo-estructura"', "HTML: Typo ID estructura")
+
+        # 2. CIERRE DE PÁRRAFOS (Versión Segura)
         self._apply_regex(r'(<p[^>]*>)(.*?)(?=\s*<div)', r'\1\2</p>', "HTML Sintaxis: <p> mal cerrado antes de div")
         self._apply_regex(r'(<p[^>]*>.*?)(?=<p)', r'\1</p>', "HTML Sintaxis: <p> anidado prohibido")
-        self._apply_regex(r'</p>Esta página', '<p>Esta página', "HTML: p invertido")
-        self._apply_regex(r'<span>([^<]+)(?!\s*</span>)', r'<span>\1</span>', "HTML: span abierto")
-        self._apply_regex(r'<br\s+/>', '<br>', "HTML: XHTML br a HTML5")
-        self._apply_regex(r'id="titulo-estructuraa"', 'id="titulo-estructura"', "HTML: Typo ID estructura")
         
+        # 3. LISTAS
         self._apply_regex(r'(<ul>\s*)<ul>', r'\1<li><ul>', "Estructura: ul dentro de ul sin li")
         self._apply_regex(r'</ul>\s*</ul>', '</ul></li></ul>', "Estructura: cierre ul anidado")
         self._apply_regex(r'<li>(.*?)(?=\n\s*<li>|\n\s*</ul>)', r'<li>\1</li>', "HTML: li cierre automático")
 
+        # 4. IDS DUPLICADOS (Lógica Genérica - ¡ESTO FALTABA!) 🚨
+        all_ids = re.findall(r'id=["\']([^"\']+)["\']', self.current_html)
+        seen = set()
+        duplicates = [x for x in all_ids if x in seen or seen.add(x)]
+        
+        for dup_id in duplicates:
+            # Reemplaza SOLO la segunda ocurrencia en adelante
+            pattern = f'(id=["\']{re.escape(dup_id)}["\'].*?)id=["\']{re.escape(dup_id)}["\']'
+            replacement = f'\\1id="{dup_id}-dup"' 
+            self._apply_regex(pattern, replacement, f"HTML: ID duplicado '{dup_id}' corregido")
+
+        # 5. SEMÁNTICA Y LIMPIEZA GENERAL
         self._apply_regex(r'<b>(.*?)</b>', r'<strong>\1</strong>', "Semántica: b a strong")
         self._apply_regex(r'<i>(.*?)</i>', r'<em>\1</em>', "Semántica: i a em")
         self._apply_regex(r'<center>(.*?)</center>', r'<div style="text-align:center">\1</div>', "W3C: Deprecado center")
         self._apply_regex(r'<font[^>]*>(.*?)</font>', r'<span>\1</span>', "W3C: Deprecado font")
         self._apply_regex(r'<strike>(.*?)</strike>', r'<del>\1</del>', "Semántica: strike a del")
         self._apply_regex(r'<u>(.*?)</u>', r'<span style="text-decoration: underline;">\1</span>', "A11y: u confuso")
+        self._apply_regex(r'<br\s+/>', '<br>', "HTML: XHTML br a HTML5")
 
+        # Limpieza atributos
         self._apply_regex(r'(<table[^>]*)border=["\']\d+["\']', r'\1', "Clean: Tabla border")
         self._apply_regex(r'(<[^>]+)align=["\'][^"\']*["\']', r'\1', "Clean: Atributo align")
         self._apply_regex(r'(<[^>]+)bgcolor=["\'][^"\']*["\']', r'\1', "Clean: Atributo bgcolor")
         self._apply_regex(r'<td\s+headers=["\'][^"\']*["\']', '<td', "Clean: Headers complejos en TD")
         self._apply_regex(r'<table[^>]*\bsummary=["\'][^"\']*["\']', '<table', "W3C: Summary obsoleto")
+
+        # 6. LIMPIEZA DE FANTASMAS (Tu añadido final) ✨
+        self._apply_regex(r'^\s*</p>', '', "HTML: Limpieza cierre huérfano inicio")
+        self._apply_regex(r'(<div[^>]*>)\s*</p>', r'\1', "HTML: Limpieza cierre huérfano tras div")
+        self._apply_regex(r'(<form[^>]*>)\s*</p>', r'\1', "HTML: Limpieza cierre huérfano tras form")
+        self._apply_regex(r'</p>\s*<p>', '<p>', "HTML: Fusión de párrafos rotos")
 
         all_ids = re.findall(r'id=["\']([^"\']+)["\']', self.current_html)
         seen = set()
