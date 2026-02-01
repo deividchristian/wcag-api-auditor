@@ -14,9 +14,26 @@ class AutoFixer:
 
     def _log_change(self, rule_name: str, before: str, after: str, index: int):
         line_num = self._get_line_number(index, self.current_html)
+        
+        # --- LÓGICA DE PRIORIDAD AUTOMÁTICA ---
+        # Definimos la prioridad basándonos en palabras clave de la regla
+        priority = "[MEDIA]" # Valor por defecto
+        
+        rule_upper = rule_name.upper()
+        
+        # Reglas críticas que rompen accesibilidad o la página
+        if any(x in rule_upper for x in ["A11Y", "SEGURIDAD", "SINTAXIS", "W3C", "CRÍTICO"]):
+            priority = "[ALTA]"
+        # Reglas cosméticas o de limpieza leve
+        elif any(x in rule_upper for x in ["TYPO", "CLEAN", "LIMPIEZA", "LINK"]):
+            priority = "[BAJA]"
+        
+        # Combinamos: "[ALTA] Nombre de la regla"
+        formatted_rule = f"{priority} {rule_name}"
+
         self.changes.append({
             "line": line_num,
-            "rule": rule_name,
+            "rule": formatted_rule,
             "before": before.strip()[:60] + "...",
             "after": after.strip()[:60] + "..."
         })
