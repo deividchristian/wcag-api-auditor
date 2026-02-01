@@ -40,7 +40,8 @@ def process_wcag_audit(html_content: str, filename: str = "archivo.html") -> dic
     duration = (end_time - start_time).total_seconds()
     
     # Lógica: Un dev tarda ~8 mins promedio en encontrar, arreglar y probar cada error.
-    human_minutes_saved = len(fixes_list) * 8 
+    human_minutes_saved = (len(fixes_list) * 2.0) + 5
+    
     
     # Formatear tiempo humano (Ej: "2h 15m" o "40m")
     if human_minutes_saved >= 60:
@@ -48,7 +49,7 @@ def process_wcag_audit(html_content: str, filename: str = "archivo.html") -> dic
         m = int(human_minutes_saved % 60)
         saved_text = f"{h}h {m}m"
     else:
-        saved_text = f"{human_minutes_saved} min"
+        saved_text = f"{int(human_minutes_saved)} min"
 
     # --- 3. GENERACIÓN DE REPORTES ---
     formatted_logs = []
